@@ -1,8 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from firebase_admin import firestore
 
 router = APIRouter(tags=["Reports"])
+
+# Múi giờ Việt Nam (UTC+7)
+VN_TZ = timezone(timedelta(hours=7))
 
 # 1. API: TỔNG QUAN (Số dư hiện tại, Tổng thu, Tổng chi trong tháng)
 @router.get("/reports/summary/{user_id}")
@@ -14,28 +17,38 @@ def get_report_summary(user_id: str):
         wallets_ref = db.collection('wallets').where('userId', '==', user_id).stream()
         current_balance = sum([doc.to_dict().get('balance', 0) for doc in wallets_ref])
         
-        # 2. Lấy giao dịch trong tháng hiện tại để tính Tổng Thu / Chi
-        now = datetime.now()
+        # 2. Lấy giao dịch trong tháng hiện tại (theo giờ Việt Nam)
+        now = datetime.now(VN_TZ)
         current_month = now.month
         current_year = now.year
         
-        transactions_ref = db.collection('transactions').where('userId', '==', user_id).stream()
+        # Tính ngày đầu và cuối tháng (timezone-aware)
+        start_of_month = datetime(current_year, current_month, 1, tzinfo=VN_TZ)
+        if current_month == 12:
+            end_of_month = datetime(current_year + 1, 1, 1, tzinfo=VN_TZ)
+        else:
+            end_of_month = datetime(current_year, current_month + 1, 1, tzinfo=VN_TZ)
+        
+        # Truy vấn Firestore trực tiếp theo khoảng thời gian thay vì tải toàn bộ
+        # LƯU Ý: Cần tạo Composite Index (userId + date) trên Firestore Console
+        transactions_ref = (
+            db.collection('transactions')
+            .where('userId', '==', user_id)
+            .where('date', '>=', start_of_month)
+            .where('date', '<', end_of_month)
+            .stream()
+        )
         
         total_income = 0
         total_expense = 0
         
         for doc in transactions_ref:
             data = doc.to_dict()
-            # Firestore lưu date dưới dạng Datetime có timezone (UTC)
-            t_date = data.get('date') 
-            if t_date:
-                # Kiểm tra xem giao dịch có nằm trong tháng và năm hiện tại không
-                if t_date.month == current_month and t_date.year == current_year:
-                    if data.get('type') == 'Thu':
-                        total_income += data.get('amount', 0)
-                    elif data.get('type') == 'Chi':
-                        total_expense += data.get('amount', 0)
-                        
+            if data.get('type') == 'Thu':
+                total_income += data.get('amount', 0)
+            elif data.get('type') == 'Chi':
+                total_expense += data.get('amount', 0)
+                    
         return {
             "status": "success",
             "data": {
@@ -57,15 +70,23 @@ def get_chart_data(
 ):
     try:
         db = firestore.client()
-        now = datetime.now()
+        now = datetime.now(VN_TZ)
         
         # Xác định khoảng thời gian cần thống kê
         days_to_subtract = 7 if period == 'week' else 30
         start_date = now - timedelta(days=days_to_subtract)
         
-        transactions_ref = db.collection('transactions').where('userId', '==', user_id).stream()
+        # Truy vấn Firestore trực tiếp theo khoảng thời gian thay vì tải toàn bộ
+        # LƯU Ý: Cần tạo Composite Index (userId + date) trên Firestore Console
+        transactions_ref = (
+            db.collection('transactions')
+            .where('userId', '==', user_id)
+            .where('date', '>=', start_date)
+            .where('date', '<=', now)
+            .stream()
+        )
         
-        # Tạo một dictionary để gom nhóm dữ liệu theo ngày. Ví dụ: {'2026-07-06': {'Thu': 100, 'Chi': 50}}
+        # Tạo dictionary để gom nhóm dữ liệu theo ngày
         daily_data = {}
         
         for doc in transactions_ref:
@@ -73,26 +94,22 @@ def get_chart_data(
             t_date = data.get('date')
             
             if t_date:
-                # Đưa timezone về dạng naive (nếu có) để dễ so sánh, hoặc bỏ qua múi giờ
-                t_date_naive = t_date.replace(tzinfo=None) 
+                # Chuyển về giờ Việt Nam trước khi nhóm theo ngày
+                t_date_vn = t_date.astimezone(VN_TZ)
+                date_str = t_date_vn.strftime('%Y-%m-%d')
                 
-                # Chỉ lấy những giao dịch nằm trong khoảng thời gian đã chọn
-                if start_date <= t_date_naive <= now:
-                    # Lấy chuỗi ngày (VD: '2026-07-06') làm chìa khóa gom nhóm
-                    date_str = t_date_naive.strftime('%Y-%m-%d')
+                if date_str not in daily_data:
+                    daily_data[date_str] = {"Thu": 0, "Chi": 0}
                     
-                    if date_str not in daily_data:
-                        daily_data[date_str] = {"Thu": 0, "Chi": 0}
-                        
-                    t_type = data.get('type')
-                    t_amount = data.get('amount', 0)
-                    
-                    if t_type in ["Thu", "Chi"]:
-                        daily_data[date_str][t_type] += t_amount
+                t_type = data.get('type')
+                t_amount = data.get('amount', 0)
+                
+                if t_type in ["Thu", "Chi"]:
+                    daily_data[date_str][t_type] += t_amount
         
-        # Biến đổi dictionary thành dạng danh sách (list) để Flutter dễ vẽ biểu đồ hơn
+        # Biến đổi dictionary thành danh sách để Flutter dễ vẽ biểu đồ
         chart_list = []
-        for date_key, values in sorted(daily_data.items()): # Sắp xếp ngày từ cũ đến mới
+        for date_key, values in sorted(daily_data.items()):
             chart_list.append({
                 "date": date_key,
                 "income": values["Thu"],

@@ -1,7 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
+from datetime import datetime, timedelta, timezone
 from firebase_admin import firestore
+
+# Múi giờ Việt Nam (UTC+7)
+VN_TZ = timezone(timedelta(hours=7))
 
 router = APIRouter(tags=["Budgets"])
 
@@ -13,16 +17,16 @@ class BudgetCreate(BaseModel):
     userId: str
     categoryId: str
     categoryName: str
-    amountLimit: int
-    month: int
-    year: int
+    amountLimit: int = Field(gt=0, description="Hạn mức ngân sách phải lớn hơn 0")
+    month: int = Field(ge=1, le=12, description="Tháng từ 1 đến 12")
+    year: int = Field(ge=2000, description="Năm phải từ 2000 trở đi")
 
 class BudgetUpdate(BaseModel):
     categoryId: Optional[str] = None
     categoryName: Optional[str] = None
-    amountLimit: Optional[int] = None
-    month: Optional[int] = None
-    year: Optional[int] = None
+    amountLimit: Optional[int] = Field(default=None, gt=0, description="Hạn mức ngân sách phải lớn hơn 0")
+    month: Optional[int] = Field(default=None, ge=1, le=12, description="Tháng từ 1 đến 12")
+    year: Optional[int] = Field(default=None, ge=2000, description="Năm phải từ 2000 trở đi")
 
 # ==========================================
 # --- CÁC API QUẢN LÝ NGÂN SÁCH ---
@@ -110,22 +114,21 @@ def get_budget_status(
         if not budgets_list:
             return {"status": "success", "message": "User chưa thiết lập ngân sách nào cho tháng này", "data": []}
 
-        # Bước 2: Lấy tất cả giao dịch CHI của user
-        transactions_ref = (
-            db.collection('transactions')
-            .where('userId', '==', user_id)
-            .where('type', '==', 'Chi')
-            .stream()
-        )
+        # Bước 2: Lấy tất cả giao dịch của user để lọc in-memory (tránh lỗi yêu cầu Composite Index trên Firestore)
+        transactions_ref = db.collection('transactions').where('userId', '==', user_id).stream()
 
         # Bước 3: Gom tổng chi tiêu theo categoryId trong tháng/năm đó
         spending_by_category = {}
         for doc in transactions_ref:
             data = doc.to_dict()
+            t_type = data.get('type')
             t_date = data.get('date')
-            if t_date and t_date.month == month and t_date.year == year:
-                cat_id = data.get('categoryId', '')
-                spending_by_category[cat_id] = spending_by_category.get(cat_id, 0) + data.get('amount', 0)
+            
+            if t_type == "Chi" and t_date:
+                # Kiểm tra xem giao dịch có nằm trong tháng và năm yêu cầu không
+                if t_date.month == month and t_date.year == year:
+                    cat_id = data.get('categoryId', '')
+                    spending_by_category[cat_id] = spending_by_category.get(cat_id, 0) + data.get('amount', 0)
 
         # Bước 4: So sánh hạn mức với thực chi, trả kết quả
         result = []

@@ -1,7 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from app.transactions import router as transaction_router
@@ -54,7 +54,7 @@ class RecurringTransactionCreate(BaseModel):
     categoryId: str
     categoryName: str
     categoryIcon: str
-    amount: int
+    amount: int = Field(gt=0, description="Số tiền phải lớn hơn 0")
     note: str
     cycle: str
     nextTriggerDate: datetime

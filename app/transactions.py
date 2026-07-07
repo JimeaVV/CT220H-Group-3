@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from firebase_admin import firestore
@@ -18,7 +18,7 @@ class TransactionCreate(BaseModel):
     categoryId: str
     categoryName: str
     categoryIcon: str
-    amount: int
+    amount: int = Field(gt=0, description="Số tiền phải lớn hơn 0")
     type: str
     date: datetime
     note: str
@@ -29,7 +29,7 @@ class TransactionUpdate(BaseModel):
     categoryId: Optional[str] = None
     categoryName: Optional[str] = None
     categoryIcon: Optional[str] = None
-    amount: Optional[int] = None
+    amount: Optional[int] = Field(default=None, gt=0, description="Số tiền phải lớn hơn 0")
     type: Optional[str] = None
     date: Optional[datetime] = None
     note: Optional[str] = None

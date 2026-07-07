@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from firebase_admin import firestore
 
@@ -13,18 +13,18 @@ class WalletCreate(BaseModel):
     userId: str
     name: str
     type: str
-    balance: int
+    balance: int = Field(ge=0, description="Số dư không được âm")
 
 class WalletUpdate(BaseModel):
     name: Optional[str] = None
     type: Optional[str] = None
-    balance: Optional[int] = None
+    balance: Optional[int] = Field(default=None, ge=0, description="Số dư không được âm")
 
 class WalletTransfer(BaseModel):
     userId: str
     fromWalletId: str
     toWalletId: str
-    amount: int
+    amount: int = Field(gt=0, description="Số tiền chuyển phải lớn hơn 0")
 
 # ==========================================
 # --- CÁC API QUẢN LÝ VÍ ---
