@@ -120,3 +120,8 @@ app.*.symbols
 
 # Bỏ qua file chứa key bảo mật Firebase
 serviceAccountKey.json
+
+# Postman Local Artifacts
+.postman/
+postman/
+*.postman_environment.json

@@ -7,6 +7,8 @@ from datetime import datetime
 from app.transactions import router as transaction_router
 from app.categories import router as category_router
 from app.reports import router as report_router
+from app.wallets import router as wallet_router
+from app.budgets import router as budget_router
 
 
 # --- 1. KHỞI TẠO FIREBASE ADMIN (Đã sửa lỗi chống trùng lặp khi Reload) ---
@@ -19,11 +21,13 @@ db = firestore.client()
 app = FastAPI(title="Backend Quản Lý Chi Tiêu - Đồ án Flutter")
 
 
-# --- 3. KẾT NỐI BỘ API GIAO DỊCH TỪ FILE RIÊNG (Đã bổ sung) ---
+# --- 3. KẾT NỐI CÁC BỘ API TỪ FILE RIÊNG ---
 from app.transactions import router as transaction_router
 app.include_router(transaction_router)
 app.include_router(category_router)
 app.include_router(report_router)
+app.include_router(wallet_router)
+app.include_router(budget_router)
 
 
 # ==========================================
@@ -34,12 +38,6 @@ class UserCreate(BaseModel):
     email: str
     displayName: str
 
-class WalletCreate(BaseModel):
-    userId: str
-    name: str
-    type: str
-    balance: int
-
 class CategoryCreate(BaseModel):
     userId: Optional[str] = "" 
     name: str
@@ -48,13 +46,6 @@ class CategoryCreate(BaseModel):
 
 # LƯU Ý: Class TransactionCreate đã được chuyển hẳn sang file transactions.py 
 # nên ở main.py chúng ta có thể xóa đi cho đỡ rối code.
-
-class BudgetCreate(BaseModel):
-    userId: str
-    categoryId: str
-    amountLimit: int
-    month: int
-    year: int
 
 class RecurringTransactionCreate(BaseModel):
     userId: str
@@ -84,42 +75,6 @@ def create_user(uid: str, user: UserCreate):
         
         user_data['createdAt'] = "Đã lưu thời gian hệ thống thành công"
         return {"status": "success", "message": "Đã tạo User", "data": user_data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# 2. API Tạo Ví (Wallet)
-@app.post("/wallets/", tags=["Wallets"])
-def create_wallet(wallet: WalletCreate):  # Đổi từ async def -> def
-    try:
-        doc_ref = db.collection('wallets').document()
-        data = wallet.dict()
-        data['id'] = doc_ref.id
-        doc_ref.set(data)
-        return {"status": "success", "message": "Đã tạo Ví", "data": data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# 3. API Tạo Danh mục (Category)
-@app.post("/categories/", tags=["Categories"])
-def create_category(category: CategoryCreate):  # Đổi từ async def -> def
-    try:
-        doc_ref = db.collection('categories').document()
-        data = category.dict()
-        data['id'] = doc_ref.id
-        doc_ref.set(data)
-        return {"status": "success", "message": "Đã tạo Danh mục", "data": data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# 4. API Tạo Ngân sách (Budget)
-@app.post("/budgets/", tags=["Budgets"])
-def create_budget(budget: BudgetCreate):  # Đổi từ async def -> def
-    try:
-        doc_ref = db.collection('budgets').document()
-        data = budget.dict()
-        data['id'] = doc_ref.id
-        doc_ref.set(data)
-        return {"status": "success", "message": "Đã tạo Ngân sách", "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
