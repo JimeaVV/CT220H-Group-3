@@ -54,7 +54,7 @@ class RecurringTransactionCreate(BaseModel):
     categoryId: str
     categoryName: str
     categoryIcon: str
-    amount: int = Field(gt=0, description="Số tiền phải lớn hơn 0")
+    amount: float = Field(gt=0, description="Số tiền phải lớn hơn 0")
     note: str
     cycle: str
     nextTriggerDate: datetime

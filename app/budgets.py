@@ -17,14 +17,14 @@ class BudgetCreate(BaseModel):
     userId: str
     categoryId: str
     categoryName: str
-    amountLimit: int = Field(gt=0, description="Hạn mức ngân sách phải lớn hơn 0")
+    amountLimit: float = Field(gt=0, description="Hạn mức ngân sách phải lớn hơn 0")
     month: int = Field(ge=1, le=12, description="Tháng từ 1 đến 12")
     year: int = Field(ge=2000, description="Năm phải từ 2000 trở đi")
 
 class BudgetUpdate(BaseModel):
     categoryId: Optional[str] = None
     categoryName: Optional[str] = None
-    amountLimit: Optional[int] = Field(default=None, gt=0, description="Hạn mức ngân sách phải lớn hơn 0")
+    amountLimit: Optional[float] = Field(default=None, gt=0, description="Hạn mức ngân sách phải lớn hơn 0")
     month: Optional[int] = Field(default=None, ge=1, le=12, description="Tháng từ 1 đến 12")
     year: Optional[int] = Field(default=None, ge=2000, description="Năm phải từ 2000 trở đi")
 
