@@ -9,6 +9,8 @@ from app.categories import router as category_router
 from app.reports import router as report_router
 from app.wallets import router as wallet_router
 from app.budgets import router as budget_router
+from app.recurring import router as recurring_router
+
 
 
 # --- 1. KHỞI TẠO FIREBASE ADMIN (Đã sửa lỗi chống trùng lặp khi Reload) ---
@@ -28,6 +30,9 @@ app.include_router(category_router)
 app.include_router(report_router)
 app.include_router(wallet_router)
 app.include_router(budget_router)
+app.include_router(recurring_router)
+
+
 
 
 # ==========================================
@@ -43,22 +48,6 @@ class CategoryCreate(BaseModel):
     name: str
     type: str 
     icon: str
-
-# LƯU Ý: Class TransactionCreate đã được chuyển hẳn sang file transactions.py 
-# nên ở main.py chúng ta có thể xóa đi cho đỡ rối code.
-
-class RecurringTransactionCreate(BaseModel):
-    userId: str
-    walletId: str
-    walletName: str
-    categoryId: str
-    categoryName: str
-    categoryIcon: str
-    amount: int = Field(gt=0, description="Số tiền phải lớn hơn 0")
-    note: str
-    cycle: str
-    nextTriggerDate: datetime
-
 
 # ==========================================
 # --- 5. CÁC API ENDPOINTS (Đã đổi sang hàm 'def' thường để tối ưu Firebase)
@@ -78,14 +67,3 @@ def create_user(uid: str, user: UserCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 5. API Tạo Giao dịch lặp lại (Recurring Transaction)
-@app.post("/recurring_transactions/", tags=["Recurring Transactions"])
-def create_recurring_transaction(recurring: RecurringTransactionCreate):  # Đổi từ async def -> def
-    try:
-        doc_ref = db.collection('recurring_transactions').document()
-        data = recurring.dict()
-        data['id'] = doc_ref.id
-        doc_ref.set(data)
-        return {"status": "success", "message": "Đã thiết lập Giao dịch lặp lại", "data": data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
