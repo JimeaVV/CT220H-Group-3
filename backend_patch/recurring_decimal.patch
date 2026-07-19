@@ -1,0 +1,9 @@
+diff --git a/app/recurring.py b/app/recurring.py
+--- a/app/recurring.py
++++ b/app/recurring.py
+@@
+-    amount: int = Field(gt=0, description="Số tiền phải lớn hơn 0")
++    amount: float = Field(gt=0, description="Số tiền phải lớn hơn 0")
+@@
+-    amount: Optional[int] = Field(default=None, gt=0)
++    amount: Optional[float] = Field(default=None, gt=0)

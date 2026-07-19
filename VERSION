@@ -1,0 +1,4 @@
+FinTrack 1.0.0
+Delivery: 2026-07-19
+Package: com.ct220h.fintrack
+Default API: http://10.0.2.2:8000
