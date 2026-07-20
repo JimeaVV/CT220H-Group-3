@@ -1,125 +1,109 @@
-from fastapi import APIRouter, HTTPException, Query
+from __future__ import annotations
+
 from datetime import datetime, timedelta, timezone
+from typing import Literal
+
+from fastapi import APIRouter, HTTPException, Query
 from firebase_admin import firestore
 
 router = APIRouter(tags=["Reports"])
-
-# Múi giờ Việt Nam (UTC+7)
 VN_TZ = timezone(timedelta(hours=7))
 
-# 1. API: TỔNG QUAN (Số dư hiện tại, Tổng thu, Tổng chi trong tháng)
+
+def _to_vietnam_time(value) -> datetime | None:
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(VN_TZ)
+
+
+def _user_transactions(db, user_id: str) -> list[dict]:
+    return [
+        doc.to_dict()
+        for doc in db.collection("transactions").where("userId", "==", user_id).stream()
+    ]
+
+
 @router.get("/reports/summary/{user_id}")
 def get_report_summary(user_id: str):
     try:
         db = firestore.client()
-        
-        # 1. Tính tổng Số dư hiện tại từ tất cả các Ví (Wallets)
-        wallets_ref = db.collection('wallets').where('userId', '==', user_id).stream()
-        current_balance = sum([doc.to_dict().get('balance', 0) for doc in wallets_ref])
-        
-        # 2. Lấy giao dịch trong tháng hiện tại (theo giờ Việt Nam)
+        wallets = db.collection("wallets").where("userId", "==", user_id).stream()
+        current_balance = sum(float(doc.to_dict().get("balance", 0)) for doc in wallets)
+
         now = datetime.now(VN_TZ)
-        current_month = now.month
-        current_year = now.year
-        
-        # Tính ngày đầu và cuối tháng (timezone-aware)
-        start_of_month = datetime(current_year, current_month, 1, tzinfo=VN_TZ)
-        if current_month == 12:
-            end_of_month = datetime(current_year + 1, 1, 1, tzinfo=VN_TZ)
-        else:
-            end_of_month = datetime(current_year, current_month + 1, 1, tzinfo=VN_TZ)
-        
-        # Truy vấn Firestore trực tiếp theo khoảng thời gian thay vì tải toàn bộ
-        # LƯU Ý: Cần tạo Composite Index (userId + date) trên Firestore Console
-        transactions_ref = (
-            db.collection('transactions')
-            .where('userId', '==', user_id)
-            .where('date', '>=', start_of_month)
-            .where('date', '<', end_of_month)
-            .stream()
-        )
-        
-        total_income = 0
-        total_expense = 0
-        
-        for doc in transactions_ref:
-            data = doc.to_dict()
-            if data.get('type') == 'Thu':
-                total_income += data.get('amount', 0)
-            elif data.get('type') == 'Chi':
-                total_expense += data.get('amount', 0)
-                    
+        total_income = 0.0
+        total_expense = 0.0
+
+        # Chỉ dùng query userId rồi lọc thời gian trong Python để không bắt người dùng
+        # phải tạo composite index userId + date.
+        for data in _user_transactions(db, user_id):
+            transaction_date = _to_vietnam_time(data.get("date"))
+            if transaction_date is None:
+                continue
+            if transaction_date.year != now.year or transaction_date.month != now.month:
+                continue
+
+            amount = float(data.get("amount", 0))
+            if data.get("type") == "Thu":
+                total_income += amount
+            elif data.get("type") == "Chi":
+                total_expense += amount
+
         return {
             "status": "success",
             "data": {
-                "currentBalance": current_balance,
-                "totalIncome": total_income,
-                "totalExpense": total_expense,
-                "month": current_month,
-                "year": current_year
-            }
+                "currentBalance": round(current_balance, 2),
+                "totalIncome": round(total_income, 2),
+                "totalExpense": round(total_expense, 2),
+                "month": now.month,
+                "year": now.year,
+            },
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-# 2. API: DỮ LIỆU BIỂU ĐỒ (Gom nhóm thu/chi theo từng ngày)
+
 @router.get("/reports/chart/{user_id}")
 def get_chart_data(
-    user_id: str, 
-    period: str = Query("month", description="Chọn 'week' (7 ngày qua) hoặc 'month' (30 ngày qua)")
+    user_id: str,
+    period: Literal["week", "month"] = Query(
+        "month",
+        description="week: 7 ngày gần nhất, month: 30 ngày gần nhất",
+    ),
 ):
     try:
         db = firestore.client()
         now = datetime.now(VN_TZ)
-        
-        # Xác định khoảng thời gian cần thống kê
-        days_to_subtract = 7 if period == 'week' else 30
-        start_date = now - timedelta(days=days_to_subtract)
-        
-        # Truy vấn Firestore trực tiếp theo khoảng thời gian thay vì tải toàn bộ
-        # LƯU Ý: Cần tạo Composite Index (userId + date) trên Firestore Console
-        transactions_ref = (
-            db.collection('transactions')
-            .where('userId', '==', user_id)
-            .where('date', '>=', start_date)
-            .where('date', '<=', now)
-            .stream()
-        )
-        
-        # Tạo dictionary để gom nhóm dữ liệu theo ngày
-        daily_data = {}
-        
-        for doc in transactions_ref:
-            data = doc.to_dict()
-            t_date = data.get('date')
-            
-            if t_date:
-                # Chuyển về giờ Việt Nam trước khi nhóm theo ngày
-                t_date_vn = t_date.astimezone(VN_TZ)
-                date_str = t_date_vn.strftime('%Y-%m-%d')
-                
-                if date_str not in daily_data:
-                    daily_data[date_str] = {"Thu": 0, "Chi": 0}
-                    
-                t_type = data.get('type')
-                t_amount = data.get('amount', 0)
-                
-                if t_type in ["Thu", "Chi"]:
-                    daily_data[date_str][t_type] += t_amount
-        
-        # Biến đổi dictionary thành danh sách để Flutter dễ vẽ biểu đồ
-        chart_list = []
-        for date_key, values in sorted(daily_data.items()):
-            chart_list.append({
+        day_count = 7 if period == "week" else 30
+        start_day = (now - timedelta(days=day_count - 1)).date()
+
+        daily_data: dict[str, dict[str, float]] = {}
+        for data in _user_transactions(db, user_id):
+            transaction_date = _to_vietnam_time(data.get("date"))
+            if transaction_date is None:
+                continue
+            if transaction_date.date() < start_day or transaction_date > now:
+                continue
+
+            transaction_type = data.get("type")
+            if transaction_type not in ("Thu", "Chi"):
+                continue
+
+            date_key = transaction_date.strftime("%Y-%m-%d")
+            daily_data.setdefault(date_key, {"Thu": 0.0, "Chi": 0.0})
+            daily_data[date_key][transaction_type] += float(data.get("amount", 0))
+
+        chart_list = [
+            {
                 "date": date_key,
-                "income": values["Thu"],
-                "expense": values["Chi"]
-            })
-            
-        return {
-            "status": "success",
-            "period": period,
-            "data": chart_list
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+                "income": round(values["Thu"], 2),
+                "expense": round(values["Chi"], 2),
+            }
+            for date_key, values in sorted(daily_data.items())
+        ]
+
+        return {"status": "success", "period": period, "data": chart_list}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

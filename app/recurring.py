@@ -1,272 +1,413 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import Optional
-from datetime import datetime, timedelta, timezone
-from firebase_admin import firestore
+from __future__ import annotations
+
 import calendar
-from google.cloud.firestore_v1.base_query import FieldFilter
+from datetime import datetime, timedelta, timezone
+from typing import Literal, Optional
 
-# Múi giờ Việt Nam (UTC+7)
+from fastapi import APIRouter, HTTPException
+from firebase_admin import firestore
+from pydantic import BaseModel, Field
+
 VN_TZ = timezone(timedelta(hours=7))
-
 router = APIRouter(tags=["Recurring Transactions"])
 
-# ==========================================
-# --- SCHEMAS CHO GIAO DỊCH LẶP LẠI ---
-# ==========================================
 
 class RecurringTransactionCreate(BaseModel):
-    userId: str
-    walletId: str
-    walletName: str
-    categoryId: str
-    categoryName: str
-    categoryIcon: str
-    amount: int = Field(gt=0, description="Số tiền phải lớn hơn 0")
-    type: str = Field(description="'Thu' hoặc 'Chi'")
-    note: str
-    cycle: str = Field(description="'daily' | 'weekly' | 'monthly' | 'yearly'")
+    userId: str = Field(min_length=1)
+    walletId: str = Field(min_length=1)
+    walletName: str = ""
+    categoryId: str = Field(min_length=1)
+    categoryName: str = ""
+    categoryIcon: str = ""
+    amount: float = Field(gt=0)
+    type: Literal["Thu", "Chi"]
+    note: str = Field(default="", max_length=500)
+    cycle: Literal["daily", "weekly", "monthly", "yearly"]
     nextTriggerDate: datetime
     isActive: bool = True
 
 
 class RecurringTransactionUpdate(BaseModel):
-    walletId: Optional[str] = None
+    walletId: Optional[str] = Field(default=None, min_length=1)
     walletName: Optional[str] = None
-    categoryId: Optional[str] = None
+    categoryId: Optional[str] = Field(default=None, min_length=1)
     categoryName: Optional[str] = None
     categoryIcon: Optional[str] = None
-    amount: Optional[int] = Field(default=None, gt=0)
-    type: Optional[str] = None
-    note: Optional[str] = None
-    cycle: Optional[str] = None
+    amount: Optional[float] = Field(default=None, gt=0)
+    type: Optional[Literal["Thu", "Chi"]] = None
+    note: Optional[str] = Field(default=None, max_length=500)
+    cycle: Optional[Literal["daily", "weekly", "monthly", "yearly"]] = None
     nextTriggerDate: Optional[datetime] = None
     isActive: Optional[bool] = None
 
 
-# ==========================================
-# --- HÀM TIỆN ÍCH: TÍNH NGÀY KÍCH HOẠT TIẾP THEO ---
-# ==========================================
+def _model_dump(model: BaseModel, *, exclude_none: bool = False) -> dict:
+    if hasattr(model, "model_dump"):
+        return model.model_dump(exclude_none=exclude_none)
+    return model.dict(exclude_none=exclude_none)
+
+
+def _money(value: float) -> float:
+    return round(float(value), 2)
+
+
+def _normalize_datetime(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=VN_TZ)
+    return value.astimezone(timezone.utc)
+
+
+def _to_datetime(value) -> datetime:
+    if not isinstance(value, datetime):
+        value = datetime.fromisoformat(value.isoformat())
+    return _normalize_datetime(value)
+
+
+def _validate_wallet_and_category(
+    wallet_data: dict,
+    category_data: dict,
+    user_id: str,
+    transaction_type: str,
+) -> None:
+    if wallet_data.get("userId") != user_id:
+        raise HTTPException(status_code=403, detail="Ví không thuộc người dùng hiện tại")
+    if category_data.get("userId", "") not in ("", user_id):
+        raise HTTPException(status_code=403, detail="Danh mục không thuộc người dùng hiện tại")
+    if category_data.get("type") != transaction_type:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Danh mục phải thuộc loại {transaction_type}",
+        )
+
 
 def calculate_next_trigger_date(current_date: datetime, cycle: str) -> datetime:
-    """
-    Tính ngày kích hoạt kế tiếp dựa trên chu kỳ.
-    Hỗ trợ: daily, weekly, monthly, yearly
-    """
-    # Firestore trả về kiểu DatetimeWithNanoseconds (không phải datetime chuẩn),
-    # khiến .replace(year=..., month=..., day=...) bị lỗi nội bộ.
-    # Convert về datetime chuẩn của Python trước khi xử lý để tránh lỗi này.
-    if type(current_date) is not datetime:
-        current_date = datetime.fromisoformat(current_date.isoformat())
+    current_date = _to_datetime(current_date)
 
     if cycle == "daily":
         return current_date + timedelta(days=1)
-
-    elif cycle == "weekly":
+    if cycle == "weekly":
         return current_date + timedelta(weeks=1)
-
-    elif cycle == "monthly":
-        # Cộng thêm 1 tháng, xử lý an toàn cho trường hợp ngày cuối tháng
-        # (vd 31/1 -> 28/2 hoặc 29/2 nếu năm nhuận)
+    if cycle == "monthly":
         month = current_date.month + 1
         year = current_date.year
         if month > 12:
             month = 1
             year += 1
-        last_day_of_month = calendar.monthrange(year, month)[1]
-        day = min(current_date.day, last_day_of_month)
+        day = min(current_date.day, calendar.monthrange(year, month)[1])
         return current_date.replace(year=year, month=month, day=day)
-
-    elif cycle == "yearly":
+    if cycle == "yearly":
         try:
             return current_date.replace(year=current_date.year + 1)
         except ValueError:
-            # Trường hợp 29/2 năm nhuận -> năm sau không nhuận
-            return current_date.replace(year=current_date.year + 1, day=28, month=2)
+            return current_date.replace(year=current_date.year + 1, month=2, day=28)
 
-    else:
-        raise ValueError(f"Chu kỳ không hợp lệ: {cycle}")
+    raise ValueError(f"Chu kỳ không hợp lệ: {cycle}")
 
 
-# ==========================================
-# --- LÕI XỬ LÝ: TỰ ĐỘNG GHI NHẬN GIAO DỊCH ĐẾN HẠN ---
-# ==========================================
+def _next_future_trigger(current_date: datetime, cycle: str, now: datetime) -> datetime:
+    """Tạo một giao dịch cho lần đến hạn và bỏ qua các kỳ đã lỡ quá lâu."""
+    next_date = calculate_next_trigger_date(current_date, cycle)
+    attempts = 0
+    while next_date <= now and attempts < 1000:
+        next_date = calculate_next_trigger_date(next_date, cycle)
+        attempts += 1
+    if attempts >= 1000:
+        raise ValueError("Không thể tính ngày kích hoạt tiếp theo")
+    return next_date
+
 
 def process_recurring_transactions():
     """
-    Quét toàn bộ recurring_transactions đang active và đã đến hạn
-    (nextTriggerDate <= thời điểm hiện tại), với mỗi cái:
-      1. Tạo 1 giao dịch (transaction) thật trong collection 'transactions'
-      2. Cập nhật số dư ví tương ứng
-      3. Dời nextTriggerDate sang kỳ tiếp theo
+    Xử lý các cấu hình đang hoạt động và đã đến hạn.
 
-    Hàm này được gọi bởi:
-      - API POST /recurring_transactions/run-now/ (chạy tay để test)
-      - Scheduler tự động (APScheduler / Cloud Scheduler) chạy định kỳ mỗi ngày
+    Mỗi cấu hình được chạy trong Firestore transaction để tránh tạo trùng khi
+    scheduler và nút "Chạy ngay" hoạt động cùng lúc.
     """
     db = firestore.client()
-    now = datetime.now(VN_TZ)
+    now = datetime.now(timezone.utc)
 
-    due_recurrings = (
-        db.collection('recurring_transactions')
-        .where('isActive', '==', True)
-        # Cú pháp mới (Chuẩn Google)
-        .where(filter=FieldFilter('nextTriggerDate', '<=', now))
-        .stream()
-    )
+    # Chỉ lọc isActive trên Firestore, còn thời gian lọc trong Python. Cách này
+    # không cần composite index isActive + nextTriggerDate.
+    active_docs = db.collection("recurring_transactions").where("isActive", "==", True).stream()
+    due_refs = []
+    for doc in active_docs:
+        data = doc.to_dict()
+        next_trigger = data.get("nextTriggerDate")
+        if next_trigger is None:
+            continue
+        try:
+            if _to_datetime(next_trigger) <= now:
+                due_refs.append(doc.reference)
+        except Exception:
+            due_refs.append(doc.reference)
 
-    processed = []
-    errors = []
+    processed: list[dict] = []
+    errors: list[dict] = []
 
-    for doc in due_recurrings:
-        rec_data = doc.to_dict()
-        rec_id = doc.id
+    for recurring_ref in due_refs:
+        transaction_ref = db.collection("transactions").document()
+        db_transaction = db.transaction()
 
         try:
-            wallet_ref = db.collection('wallets').document(rec_data['walletId'])
-            wallet_doc = wallet_ref.get()
+            @firestore.transactional
+            def apply_recurring(tx):
+                recurring_doc = recurring_ref.get(transaction=tx)
+                if not recurring_doc.exists:
+                    return None
 
-            if not wallet_doc.exists:
-                errors.append({"recurringId": rec_id, "reason": "Không tìm thấy ví"})
-                continue
+                recurring_data = recurring_doc.to_dict()
+                if recurring_data.get("isActive") is not True:
+                    return None
 
-            wallet_data = wallet_doc.to_dict()
-            current_balance = wallet_data.get('balance', 0)
+                trigger_date = recurring_data.get("nextTriggerDate")
+                if trigger_date is None or _to_datetime(trigger_date) > now:
+                    return None
 
-            if rec_data['type'] == "Chi":
-                new_balance = current_balance - rec_data['amount']
-            elif rec_data['type'] == "Thu":
-                new_balance = current_balance + rec_data['amount']
-            else:
-                new_balance = current_balance
+                wallet_ref = db.collection("wallets").document(recurring_data.get("walletId", ""))
+                category_ref = db.collection("categories").document(recurring_data.get("categoryId", ""))
+                wallet_doc = wallet_ref.get(transaction=tx)
+                category_doc = category_ref.get(transaction=tx)
 
-            # Tạo giao dịch mới từ cấu hình recurring
-            transaction_ref = db.collection('transactions').document()
-            transaction_data = {
-                "id": transaction_ref.id,
-                "userId": rec_data['userId'],
-                "walletId": rec_data['walletId'],
-                "walletName": rec_data.get('walletName', ''),
-                "categoryId": rec_data['categoryId'],
-                "categoryName": rec_data.get('categoryName', ''),
-                "categoryIcon": rec_data.get('categoryIcon', ''),
-                "amount": rec_data['amount'],
-                "type": rec_data['type'],
-                "date": now,
-                "note": rec_data.get('note', '') + " (Tự động - Lặp lại)",
-                "isFromRecurring": True,
-                "recurringId": rec_id,
-            }
+                if not wallet_doc.exists:
+                    raise RuntimeError("Không tìm thấy ví")
+                if not category_doc.exists:
+                    raise RuntimeError("Không tìm thấy danh mục")
 
-            # Tính ngày kích hoạt kế tiếp
-            next_date = calculate_next_trigger_date(
-                rec_data['nextTriggerDate'], rec_data['cycle']
-            )
+                wallet_data = wallet_doc.to_dict()
+                category_data = category_doc.to_dict()
+                user_id = recurring_data.get("userId", "")
+                transaction_type = recurring_data.get("type")
+                try:
+                    _validate_wallet_and_category(
+                        wallet_data,
+                        category_data,
+                        user_id,
+                        transaction_type,
+                    )
+                except HTTPException as exc:
+                    raise RuntimeError(str(exc.detail)) from exc
 
-            # Ghi đồng thời: tạo transaction, cập nhật ví, dời lịch recurring
-            batch = db.batch()
-            batch.set(transaction_ref, transaction_data)
-            batch.update(wallet_ref, {'balance': new_balance})
-            batch.update(doc.reference, {'nextTriggerDate': next_date})
-            batch.commit()
+                amount = _money(recurring_data.get("amount", 0))
+                current_balance = _money(wallet_data.get("balance", 0))
+                balance_delta = amount if transaction_type == "Thu" else -amount
+                new_balance = _money(current_balance + balance_delta)
+                if new_balance < 0:
+                    raise RuntimeError(
+                        f"Số dư ví không đủ: hiện có {current_balance:g}, cần {amount:g}"
+                    )
 
-            processed.append({
-                "recurringId": rec_id,
-                "transactionId": transaction_ref.id,
-                "amount": rec_data['amount'],
-                "nextTriggerDate": next_date.isoformat(),
-            })
+                next_date = _next_future_trigger(
+                    _to_datetime(trigger_date),
+                    recurring_data.get("cycle", "monthly"),
+                    now,
+                )
+                note = recurring_data.get("note", "").strip()
+                automatic_note = f"{note} (Tự động - Lặp lại)" if note else "Tự động - Lặp lại"
 
-        except Exception as e:
-            errors.append({"recurringId": rec_id, "reason": str(e)})
+                transaction_data = {
+                    "id": transaction_ref.id,
+                    "userId": user_id,
+                    "walletId": wallet_ref.id,
+                    "walletName": wallet_data.get("name", ""),
+                    "categoryId": category_ref.id,
+                    "categoryName": category_data.get("name", ""),
+                    "categoryIcon": category_data.get("icon", ""),
+                    "amount": amount,
+                    "type": transaction_type,
+                    "date": now,
+                    "note": automatic_note,
+                    "isFromRecurring": True,
+                    "recurringId": recurring_ref.id,
+                }
 
-    return {"processedCount": len(processed), "processed": processed, "errors": errors}
+                tx.set(transaction_ref, transaction_data)
+                tx.update(wallet_ref, {"balance": new_balance})
+                tx.update(
+                    recurring_ref,
+                    {
+                        "walletName": wallet_data.get("name", ""),
+                        "categoryName": category_data.get("name", ""),
+                        "categoryIcon": category_data.get("icon", ""),
+                        "nextTriggerDate": next_date,
+                        "lastProcessedAt": now,
+                        "lastError": firestore.DELETE_FIELD,
+                    },
+                )
+
+                return {
+                    "recurringId": recurring_ref.id,
+                    "transactionId": transaction_ref.id,
+                    "amount": amount,
+                    "nextTriggerDate": next_date.isoformat(),
+                }
+
+            result = apply_recurring(db_transaction)
+            if result is not None:
+                processed.append(result)
+        except Exception as exc:
+            reason = str(exc)
+            errors.append({"recurringId": recurring_ref.id, "reason": reason})
+            try:
+                recurring_ref.update({"lastError": reason, "lastErrorAt": now})
+            except Exception:
+                pass
+
+    return {
+        "processedCount": len(processed),
+        "processed": processed,
+        "errors": errors,
+    }
 
 
-# ==========================================
-# --- CÁC API QUẢN LÝ RECURRING TRANSACTIONS ---
-# ==========================================
-
-# 1. TẠO GIAO DỊCH LẶP LẠI
 @router.post("/recurring_transactions/")
 def create_recurring_transaction(recurring: RecurringTransactionCreate):
     try:
         db = firestore.client()
-        doc_ref = db.collection('recurring_transactions').document()
-        data = recurring.dict()
-        data['id'] = doc_ref.id
+        wallet_doc = db.collection("wallets").document(recurring.walletId).get()
+        category_doc = db.collection("categories").document(recurring.categoryId).get()
+        if not wallet_doc.exists:
+            raise HTTPException(status_code=404, detail="Không tìm thấy ví")
+        if not category_doc.exists:
+            raise HTTPException(status_code=404, detail="Không tìm thấy danh mục")
+
+        user_id = recurring.userId.strip()
+        wallet_data = wallet_doc.to_dict()
+        category_data = category_doc.to_dict()
+        _validate_wallet_and_category(wallet_data, category_data, user_id, recurring.type)
+
+        doc_ref = db.collection("recurring_transactions").document()
+        data = _model_dump(recurring)
+        data.update(
+            {
+                "id": doc_ref.id,
+                "userId": user_id,
+                "walletName": wallet_data.get("name", ""),
+                "categoryName": category_data.get("name", ""),
+                "categoryIcon": category_data.get("icon", ""),
+                "amount": _money(recurring.amount),
+                "note": recurring.note.strip(),
+                "nextTriggerDate": _normalize_datetime(recurring.nextTriggerDate),
+            }
+        )
         doc_ref.set(data)
-        return {"status": "success", "message": "Đã thiết lập Giao dịch lặp lại", "data": data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "status": "success",
+            "message": "Đã thiết lập giao dịch lặp lại",
+            "data": data,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-# 2. LẤY DANH SÁCH GIAO DỊCH LẶP LẠI CỦA USER
 @router.get("/recurring_transactions/user/{user_id}")
 def get_user_recurring_transactions(user_id: str):
     try:
         db = firestore.client()
-        recurring_ref = (
-            db.collection('recurring_transactions')
-            .where('userId', '==', user_id)
+        items = []
+        docs = (
+            db.collection("recurring_transactions")
+            .where("userId", "==", user_id)
             .stream()
         )
-        recurring_list = [doc.to_dict() for doc in recurring_ref]
-        return {"status": "success", "total": len(recurring_list), "data": recurring_list}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        for doc in docs:
+            data = doc.to_dict()
+            data.setdefault("id", doc.id)
+            items.append(data)
+        items.sort(
+            key=lambda item: _to_datetime(item.get("nextTriggerDate"))
+            if item.get("nextTriggerDate")
+            else datetime.max.replace(tzinfo=timezone.utc)
+        )
+        return {"status": "success", "total": len(items), "data": items}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-# 3. SỬA GIAO DỊCH LẶP LẠI (vd đổi số tiền, tạm dừng bằng isActive=False)
 @router.put("/recurring_transactions/{recurring_id}")
-def update_recurring_transaction(recurring_id: str, recurring: RecurringTransactionUpdate):
+def update_recurring_transaction(
+    recurring_id: str,
+    recurring: RecurringTransactionUpdate,
+):
     try:
         db = firestore.client()
-        doc_ref = db.collection('recurring_transactions').document(recurring_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Không tìm thấy giao dịch lặp lại này")
+        doc_ref = db.collection("recurring_transactions").document(recurring_id)
+        snapshot = doc_ref.get()
+        if not snapshot.exists:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giao dịch lặp lại")
 
-        update_data = {k: v for k, v in recurring.dict().items() if v is not None}
-        if update_data:
-            doc_ref.update(update_data)
+        current = snapshot.to_dict()
+        changes = _model_dump(recurring, exclude_none=True)
+        if not changes:
+            return {"status": "success", "message": "Không có gì thay đổi", "data": current}
 
+        user_id = current.get("userId", "")
+        wallet_id = changes.get("walletId", current.get("walletId"))
+        category_id = changes.get("categoryId", current.get("categoryId"))
+        transaction_type = changes.get("type", current.get("type"))
+
+        wallet_doc = db.collection("wallets").document(wallet_id).get()
+        category_doc = db.collection("categories").document(category_id).get()
+        if not wallet_doc.exists:
+            raise HTTPException(status_code=404, detail="Không tìm thấy ví")
+        if not category_doc.exists:
+            raise HTTPException(status_code=404, detail="Không tìm thấy danh mục")
+
+        wallet_data = wallet_doc.to_dict()
+        category_data = category_doc.to_dict()
+        _validate_wallet_and_category(wallet_data, category_data, user_id, transaction_type)
+
+        changes.update(
+            {
+                "walletId": wallet_id,
+                "walletName": wallet_data.get("name", ""),
+                "categoryId": category_id,
+                "categoryName": category_data.get("name", ""),
+                "categoryIcon": category_data.get("icon", ""),
+                "type": transaction_type,
+            }
+        )
+        if "amount" in changes:
+            changes["amount"] = _money(changes["amount"])
+        if "note" in changes:
+            changes["note"] = changes["note"].strip()
+        if "nextTriggerDate" in changes:
+            changes["nextTriggerDate"] = _normalize_datetime(changes["nextTriggerDate"])
+        if changes.get("isActive") is True:
+            changes["lastError"] = firestore.DELETE_FIELD
+
+        doc_ref.update(changes)
+        updated = {**current, **changes}
+        updated.pop("lastError", None) if changes.get("lastError") is firestore.DELETE_FIELD else None
         return {
             "status": "success",
             "message": "Đã cập nhật giao dịch lặp lại",
-            "data": doc_ref.get().to_dict(),
+            "data": updated,
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-# 4. XÓA GIAO DỊCH LẶP LẠI
 @router.delete("/recurring_transactions/{recurring_id}")
 def delete_recurring_transaction(recurring_id: str):
     try:
-        db = firestore.client()
-        doc_ref = db.collection('recurring_transactions').document(recurring_id)
+        doc_ref = firestore.client().collection("recurring_transactions").document(recurring_id)
         if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Không tìm thấy giao dịch lặp lại này")
-
+            raise HTTPException(status_code=404, detail="Không tìm thấy giao dịch lặp lại")
         doc_ref.delete()
-        return {"status": "success", "message": f"Đã xóa giao dịch lặp lại {recurring_id}"}
+        return {"status": "success", "message": "Đã xóa giao dịch lặp lại"}
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-# 5. CHẠY XỬ LÝ THỦ CÔNG (dùng để TEST trước khi gắn scheduler tự động)
 @router.post("/recurring_transactions/run-now/")
 def run_recurring_now():
-    """
-    Gọi API này bằng tay (qua Swagger /docs) để kiểm tra logic xử lý
-    recurring transactions mà không cần đợi scheduler chạy tự động.
-    """
     try:
-        result = process_recurring_transactions()
-        return {"status": "success", **result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"status": "success", **process_recurring_transactions()}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

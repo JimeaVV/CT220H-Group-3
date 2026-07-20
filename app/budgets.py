@@ -1,155 +1,269 @@
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
-from typing import Optional
+from __future__ import annotations
+
 from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Query
 from firebase_admin import firestore
+from pydantic import BaseModel, Field
 
-# Múi giờ Việt Nam (UTC+7)
 VN_TZ = timezone(timedelta(hours=7))
-
 router = APIRouter(tags=["Budgets"])
 
-# ==========================================
-# --- SCHEMAS CHO NGÂN SÁCH ---
-# ==========================================
 
 class BudgetCreate(BaseModel):
-    userId: str
-    categoryId: str
-    categoryName: str
-    amountLimit: float = Field(gt=0, description="Hạn mức ngân sách phải lớn hơn 0")
-    month: int = Field(ge=1, le=12, description="Tháng từ 1 đến 12")
-    year: int = Field(ge=2000, description="Năm phải từ 2000 trở đi")
+    userId: str = Field(min_length=1)
+    categoryId: str = Field(min_length=1)
+    categoryName: str = ""
+    amountLimit: float = Field(gt=0)
+    month: int = Field(ge=1, le=12)
+    year: int = Field(ge=2000, le=2200)
+
 
 class BudgetUpdate(BaseModel):
-    categoryId: Optional[str] = None
+    categoryId: Optional[str] = Field(default=None, min_length=1)
     categoryName: Optional[str] = None
-    amountLimit: Optional[float] = Field(default=None, gt=0, description="Hạn mức ngân sách phải lớn hơn 0")
-    month: Optional[int] = Field(default=None, ge=1, le=12, description="Tháng từ 1 đến 12")
-    year: Optional[int] = Field(default=None, ge=2000, description="Năm phải từ 2000 trở đi")
+    amountLimit: Optional[float] = Field(default=None, gt=0)
+    month: Optional[int] = Field(default=None, ge=1, le=12)
+    year: Optional[int] = Field(default=None, ge=2000, le=2200)
 
-# ==========================================
-# --- CÁC API QUẢN LÝ NGÂN SÁCH ---
-# ==========================================
 
-# 1. TẠO NGÂN SÁCH
+def _model_dump(model: BaseModel, *, exclude_none: bool = False) -> dict:
+    if hasattr(model, "model_dump"):
+        return model.model_dump(exclude_none=exclude_none)
+    return model.dict(exclude_none=exclude_none)
+
+
+def _to_vietnam_time(value) -> datetime | None:
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(VN_TZ)
+
+
+def _validate_expense_category(db, category_id: str, user_id: str) -> dict:
+    snapshot = db.collection("categories").document(category_id).get()
+    if not snapshot.exists:
+        raise HTTPException(status_code=404, detail="Không tìm thấy danh mục")
+
+    data = snapshot.to_dict()
+    if data.get("userId", "") not in ("", user_id):
+        raise HTTPException(status_code=403, detail="Danh mục không thuộc người dùng hiện tại")
+    if data.get("type") != "Chi":
+        raise HTTPException(status_code=400, detail="Chỉ có thể đặt ngân sách cho danh mục Chi")
+    return data
+
+
+def _find_duplicate_budget(
+    db,
+    user_id: str,
+    category_id: str,
+    month: int,
+    year: int,
+    *,
+    exclude_id: str | None = None,
+) -> bool:
+    docs = db.collection("budgets").where("userId", "==", user_id).stream()
+    for doc in docs:
+        if exclude_id and doc.id == exclude_id:
+            continue
+        data = doc.to_dict()
+        if (
+            data.get("categoryId") == category_id
+            and data.get("month") == month
+            and data.get("year") == year
+        ):
+            return True
+    return False
+
+
 @router.post("/budgets/")
 def create_budget(budget: BudgetCreate):
     try:
         db = firestore.client()
-        doc_ref = db.collection('budgets').document()
-        data = budget.dict()
-        data['id'] = doc_ref.id
-        doc_ref.set(data)
-        return {"status": "success", "message": "Đã tạo Ngân sách", "data": data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        user_id = budget.userId.strip()
+        category_data = _validate_expense_category(db, budget.categoryId, user_id)
 
-# 2. LẤY DANH SÁCH NGÂN SÁCH CỦA USER
+        if _find_duplicate_budget(
+            db,
+            user_id,
+            budget.categoryId,
+            budget.month,
+            budget.year,
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Danh mục này đã có ngân sách trong tháng được chọn",
+            )
+
+        doc_ref = db.collection("budgets").document()
+        data = _model_dump(budget)
+        data.update(
+            {
+                "id": doc_ref.id,
+                "userId": user_id,
+                "categoryName": category_data.get("name", ""),
+                "amountLimit": round(float(budget.amountLimit), 2),
+            }
+        )
+        doc_ref.set(data)
+        return {"status": "success", "message": "Đã tạo ngân sách", "data": data}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @router.get("/budgets/user/{user_id}")
 def get_user_budgets(user_id: str):
     try:
         db = firestore.client()
-        budgets_ref = db.collection('budgets').where('userId', '==', user_id).stream()
-        budgets_list = [doc.to_dict() for doc in budgets_ref]
-        return {"status": "success", "total": len(budgets_list), "data": budgets_list}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        items = []
+        for doc in db.collection("budgets").where("userId", "==", user_id).stream():
+            data = doc.to_dict()
+            data.setdefault("id", doc.id)
+            items.append(data)
+        items.sort(key=lambda item: (item.get("year", 0), item.get("month", 0), item.get("categoryName", "")))
+        return {"status": "success", "total": len(items), "data": items}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-# 3. CẬP NHẬT NGÂN SÁCH
+
 @router.put("/budgets/{budget_id}")
 def update_budget(budget_id: str, budget: BudgetUpdate):
     try:
         db = firestore.client()
-        doc_ref = db.collection('budgets').document(budget_id)
-        if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Không tìm thấy ngân sách này")
+        doc_ref = db.collection("budgets").document(budget_id)
+        snapshot = doc_ref.get()
+        if not snapshot.exists:
+            raise HTTPException(status_code=404, detail="Không tìm thấy ngân sách")
 
-        update_data = {k: v for k, v in budget.dict().items() if v is not None}
-        if update_data:
-            doc_ref.update(update_data)
+        current = snapshot.to_dict()
+        changes = _model_dump(budget, exclude_none=True)
+        if not changes:
+            return {"status": "success", "message": "Không có gì thay đổi", "data": current}
 
-        return {"status": "success", "message": "Đã cập nhật ngân sách", "data": doc_ref.get().to_dict()}
+        user_id = current.get("userId", "")
+        category_id = changes.get("categoryId", current.get("categoryId"))
+        month = changes.get("month", current.get("month"))
+        year = changes.get("year", current.get("year"))
+        category_data = _validate_expense_category(db, category_id, user_id)
+
+        if _find_duplicate_budget(
+            db,
+            user_id,
+            category_id,
+            month,
+            year,
+            exclude_id=budget_id,
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Danh mục này đã có ngân sách trong tháng được chọn",
+            )
+
+        changes.update(
+            {
+                "categoryId": category_id,
+                "categoryName": category_data.get("name", ""),
+                "month": month,
+                "year": year,
+            }
+        )
+        if "amountLimit" in changes:
+            changes["amountLimit"] = round(float(changes["amountLimit"]), 2)
+
+        doc_ref.update(changes)
+        updated = {**current, **changes}
+        return {"status": "success", "message": "Đã cập nhật ngân sách", "data": updated}
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-# 4. XÓA NGÂN SÁCH
+
 @router.delete("/budgets/{budget_id}")
 def delete_budget(budget_id: str):
     try:
-        db = firestore.client()
-        doc_ref = db.collection('budgets').document(budget_id)
+        doc_ref = firestore.client().collection("budgets").document(budget_id)
         if not doc_ref.get().exists:
-            raise HTTPException(status_code=404, detail="Không tìm thấy ngân sách này")
-
+            raise HTTPException(status_code=404, detail="Không tìm thấy ngân sách")
         doc_ref.delete()
-        return {"status": "success", "message": f"Đã xóa ngân sách {budget_id}"}
+        return {"status": "success", "message": "Đã xóa ngân sách"}
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-# 5. KIỂM TRA TRẠNG THÁI NGÂN SÁCH
+
 @router.get("/budgets/user/{user_id}/status")
 def get_budget_status(
     user_id: str,
-    month: int = Query(..., description="Tháng cần kiểm tra (1-12)"),
-    year: int = Query(..., description="Năm cần kiểm tra")
+    month: int = Query(..., ge=1, le=12),
+    year: int = Query(..., ge=2000, le=2200),
 ):
     try:
         db = firestore.client()
-
-        # Bước 1: Lấy tất cả ngân sách của user trong tháng/năm được chọn
-        budgets_ref = (
-            db.collection('budgets')
-            .where('userId', '==', user_id)
-            .where('month', '==', month)
-            .where('year', '==', year)
-            .stream()
-        )
-        budgets_list = [doc.to_dict() for doc in budgets_ref]
-
-        if not budgets_list:
-            return {"status": "success", "message": "User chưa thiết lập ngân sách nào cho tháng này", "data": []}
-
-        # Bước 2: Lấy tất cả giao dịch của user để lọc in-memory (tránh lỗi yêu cầu Composite Index trên Firestore)
-        transactions_ref = db.collection('transactions').where('userId', '==', user_id).stream()
-
-        # Bước 3: Gom tổng chi tiêu theo categoryId trong tháng/năm đó
-        spending_by_category = {}
-        for doc in transactions_ref:
+        all_budgets = []
+        for doc in db.collection("budgets").where("userId", "==", user_id).stream():
             data = doc.to_dict()
-            t_type = data.get('type')
-            t_date = data.get('date')
-            
-            if t_type == "Chi" and t_date:
-                # Kiểm tra xem giao dịch có nằm trong tháng và năm yêu cầu không
-                if t_date.month == month and t_date.year == year:
-                    cat_id = data.get('categoryId', '')
-                    spending_by_category[cat_id] = spending_by_category.get(cat_id, 0) + data.get('amount', 0)
+            data.setdefault("id", doc.id)
+            all_budgets.append(data)
+        budgets = [
+            item
+            for item in all_budgets
+            if item.get("month") == month and item.get("year") == year
+        ]
 
-        # Bước 4: So sánh hạn mức với thực chi, trả kết quả
+        if not budgets:
+            return {
+                "status": "success",
+                "message": "Chưa có ngân sách trong tháng này",
+                "data": [],
+            }
+
+        spending_by_category: dict[str, float] = {}
+        transaction_docs = db.collection("transactions").where("userId", "==", user_id).stream()
+        for doc in transaction_docs:
+            data = doc.to_dict()
+            if data.get("type") != "Chi":
+                continue
+            transaction_date = _to_vietnam_time(data.get("date"))
+            if transaction_date is None:
+                continue
+            if transaction_date.month != month or transaction_date.year != year:
+                continue
+
+            category_id = data.get("categoryId", "")
+            spending_by_category[category_id] = (
+                spending_by_category.get(category_id, 0.0) + float(data.get("amount", 0))
+            )
+
         result = []
-        for budget in budgets_list:
-            cat_id = budget.get('categoryId', '')
-            limit = budget.get('amountLimit', 0)
-            spent = spending_by_category.get(cat_id, 0)
-            remaining = limit - spent
+        for budget in budgets:
+            category_id = budget.get("categoryId", "")
+            limit = float(budget.get("amountLimit", 0))
+            spent = round(spending_by_category.get(category_id, 0.0), 2)
+            remaining = round(limit - spent, 2)
+            percent = round((spent / limit) * 100, 1) if limit > 0 else 0.0
+            exceeded = spent > limit
 
-            result.append({
-                "budgetId": budget.get('id'),
-                "categoryId": cat_id,
-                "categoryName": budget.get('categoryName', ''),
-                "amountLimit": limit,
-                "totalSpent": spent,
-                "remaining": remaining,
-                "percentUsed": round((spent / limit) * 100, 1) if limit > 0 else 0,
-                "isExceeded": spent > limit,
-                "isWarning": spent >= limit * 0.8
-            })
+            result.append(
+                {
+                    "budgetId": budget.get("id", ""),
+                    "categoryId": category_id,
+                    "categoryName": budget.get("categoryName", ""),
+                    "amountLimit": round(limit, 2),
+                    "totalSpent": spent,
+                    "remaining": remaining,
+                    "percentUsed": percent,
+                    "isExceeded": exceeded,
+                    "isWarning": (not exceeded) and spent >= limit * 0.8,
+                }
+            )
 
+        result.sort(key=lambda item: item["percentUsed"], reverse=True)
         return {"status": "success", "month": month, "year": year, "data": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
