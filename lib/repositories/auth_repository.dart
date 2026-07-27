@@ -11,7 +11,7 @@ class AuthRepository {
   final Dio _dio;
   bool _googleInitialized = false;
 
-  Stream<User?> authStateChanges() => _auth.authStateChanges();
+  Stream<User?> authStateChanges() => _auth.userChanges();
   User? get currentUser => _auth.currentUser;
 
   Future<UserCredential> signInWithEmail({required String email, required String password}) async {
@@ -19,7 +19,10 @@ class AuthRepository {
       email: email.trim(),
       password: password,
     );
-    await _syncUser(credential.user);
+    await credential.user?.reload();
+    await _auth.currentUser?.reload();
+    final user = _auth.currentUser ?? credential.user;
+    await _syncUser(user);
     return credential;
   }
 
@@ -28,14 +31,20 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
+    final cleanName = displayName.trim();
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
-    await credential.user?.updateDisplayName(displayName.trim());
-    await credential.user?.sendEmailVerification();
-    await credential.user?.reload();
-    await _syncUser(_auth.currentUser);
+    final user = credential.user;
+    if (user != null) {
+      await user.updateDisplayName(cleanName);
+      await user.sendEmailVerification();
+      await user.reload();
+    }
+    await _auth.currentUser?.reload();
+    final updatedUser = _auth.currentUser ?? user;
+    await _syncUser(updatedUser, customDisplayName: cleanName);
     return credential;
   }
 
@@ -56,7 +65,9 @@ class AuthRepository {
 
     final credential = GoogleAuthProvider.credential(idToken: idToken);
     final result = await _auth.signInWithCredential(credential);
-    await _syncUser(result.user);
+    await result.user?.reload();
+    await _auth.currentUser?.reload();
+    await _syncUser(_auth.currentUser ?? result.user);
     return result;
   }
 
@@ -83,16 +94,53 @@ class AuthRepository {
     }
   }
 
-  Future<void> _syncUser(User? user) async {
+  Future<void> _syncUser(User? user, {String? customDisplayName}) async {
     if (user == null) return;
+
+    String resolvedName = '';
+    if (customDisplayName != null && customDisplayName.trim().isNotEmpty) {
+      resolvedName = customDisplayName.trim();
+    } else if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
+      resolvedName = user.displayName!.trim();
+    }
+
+    // Nếu Firebase Auth chưa có displayName, thử đọc tên đã lưu ở Backend
+    if (resolvedName.isEmpty) {
+      try {
+        final response = await _dio.get('/users/${user.uid}');
+        if (response.statusCode == 200 && response.data != null) {
+          final data = response.data['data'];
+          if (data != null &&
+              data['displayName'] != null &&
+              (data['displayName'] as String).trim().isNotEmpty) {
+            resolvedName = (data['displayName'] as String).trim();
+          }
+        }
+      } catch (_) {
+        // Backend GET lỗi hoặc không phản hồi
+      }
+    }
+
+    // Giá trị dự phòng nếu cả Firebase và Backend chưa lưu tên
+    if (resolvedName.isEmpty) {
+      resolvedName = user.email?.split('@').first ?? 'Người dùng';
+    }
+
+    // Nếu trong Firebase Auth của SDK chưa có displayName, cập nhật lại
+    if (resolvedName.isNotEmpty &&
+        (user.displayName == null || user.displayName!.trim().isEmpty)) {
+      try {
+        await user.updateDisplayName(resolvedName);
+        await user.reload();
+      } catch (_) {}
+    }
+
     try {
       await _dio.post(
         '/users/${user.uid}',
         data: {
           'email': user.email ?? '',
-          'displayName': user.displayName?.trim().isNotEmpty == true
-              ? user.displayName!.trim()
-              : (user.email?.split('@').first ?? 'Người dùng'),
+          'displayName': resolvedName,
         },
       );
     } on DioException {
