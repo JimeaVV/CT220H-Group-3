@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_client.dart';
 import '../models/budget_model.dart';
 import '../models/category_model.dart';
@@ -45,10 +44,10 @@ class ThemeModeController extends StateNotifier<ThemeMode> {
 
   static const _key = 'fintrack_theme_mode';
 
-  get SharedPreferences => null;
+  get sharedPreferences => null;
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await sharedPreferences.getInstance();
     final stored = prefs.getString(_key);
     state = switch (stored) {
       'light' => ThemeMode.light,
@@ -59,7 +58,7 @@ class ThemeModeController extends StateNotifier<ThemeMode> {
 
   Future<void> setMode(ThemeMode mode) async {
     state = mode;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await sharedPreferences.getInstance();
     await prefs.setString(_key, mode.name);
   }
 
