@@ -14,7 +14,8 @@ class ProfileScreen extends ConsumerWidget {
     if (user == null) return const SizedBox.shrink();
     final mode = ref.watch(themeModeProvider);
     final effectiveDark = mode == ThemeMode.dark ||
-        (mode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+        (mode == ThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Cá nhân')),
@@ -28,11 +29,17 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: 31,
-                    backgroundImage: user.photoURL == null ? null : NetworkImage(user.photoURL!),
+                    backgroundImage: user.photoURL == null
+                        ? null
+                        : NetworkImage(user.photoURL!),
                     child: user.photoURL == null
                         ? Text(
-                            (user.displayName?.trim().isNotEmpty == true ? user.displayName!.trim()[0] : 'F').toUpperCase(),
-                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                            (user.displayName?.trim().isNotEmpty == true
+                                    ? user.displayName!.trim()[0]
+                                    : 'F')
+                                .toUpperCase(),
+                            style: const TextStyle(
+                                fontSize: 24, fontWeight: FontWeight.w900),
                           )
                         : null,
                   ),
@@ -42,21 +49,31 @@ class ProfileScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user.displayName?.trim().isNotEmpty == true ? user.displayName!.trim() : 'Người dùng FinTrack',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                          user.displayName?.trim().isNotEmpty == true
+                              ? user.displayName!.trim()
+                              : 'Người dùng FinTrack',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 3),
-                        Text(user.email ?? '', style: Theme.of(context).textTheme.bodySmall),
+                        Text(user.email ?? '',
+                            style: Theme.of(context).textTheme.bodySmall),
                         const SizedBox(height: 8),
                         Row(
                           children: [
                             Icon(
-                              user.emailVerified ? Icons.verified_rounded : Icons.info_outline_rounded,
+                              user.emailVerified
+                                  ? Icons.verified_rounded
+                                  : Icons.info_outline_rounded,
                               size: 16,
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              user.emailVerified ? 'Email đã xác minh' : 'Email chưa xác minh',
+                              user.emailVerified
+                                  ? 'Email đã xác minh'
+                                  : 'Email chưa xác minh',
                               style: Theme.of(context).textTheme.labelMedium,
                             ),
                           ],
@@ -74,14 +91,19 @@ class ProfileScreen extends ConsumerWidget {
               child: ListTile(
                 leading: const Icon(Icons.mark_email_unread_outlined),
                 title: const Text('Xác minh email'),
-                subtitle: const Text('Gửi lại thư xác minh đến email hiện tại.'),
+                subtitle:
+                    const Text('Gửi lại thư xác minh đến email hiện tại.'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () async {
                   try {
-                    await ref.read(authRepositoryProvider).sendVerificationEmail();
-                    if (context.mounted) showAppSnackBar(context, 'Đã gửi email xác minh.');
+                    await ref
+                        .read(authRepositoryProvider)
+                        .sendVerificationEmail();
+                    if (context.mounted)
+                      showAppSnackBar(context, 'Đã gửi email xác minh.');
                   } catch (error) {
-                    if (context.mounted) showAppSnackBar(context, error.toString(), isError: true);
+                    if (context.mounted)
+                      showAppSnackBar(context, error.toString(), isError: true);
                   }
                 },
               ),
@@ -93,13 +115,29 @@ class ProfileScreen extends ConsumerWidget {
           Card(
             child: Column(
               children: [
-                _SettingsTile(icon: Icons.account_balance_wallet_outlined, title: 'Ví tiền', subtitle: 'Tạo, chỉnh sửa và chuyển tiền giữa các ví', onTap: () => context.push('/wallets')),
+                _SettingsTile(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'Ví tiền',
+                    subtitle: 'Tạo, chỉnh sửa và chuyển tiền giữa các ví',
+                    onTap: () => context.push('/wallets')),
                 const Divider(height: 1),
-                _SettingsTile(icon: Icons.category_outlined, title: 'Danh mục', subtitle: 'Danh mục thu, chi mặc định và tùy chỉnh', onTap: () => context.push('/categories')),
+                _SettingsTile(
+                    icon: Icons.category_outlined,
+                    title: 'Danh mục',
+                    subtitle: 'Danh mục thu, chi mặc định và tùy chỉnh',
+                    onTap: () => context.push('/categories')),
                 const Divider(height: 1),
-                _SettingsTile(icon: Icons.savings_outlined, title: 'Ngân sách', subtitle: 'Theo dõi hạn mức từng danh mục', onTap: () => context.push('/budgets')),
+                _SettingsTile(
+                    icon: Icons.savings_outlined,
+                    title: 'Ngân sách',
+                    subtitle: 'Theo dõi hạn mức từng danh mục',
+                    onTap: () => context.push('/budgets')),
                 const Divider(height: 1),
-                _SettingsTile(icon: Icons.autorenew_rounded, title: 'Giao dịch lặp lại', subtitle: 'Tiền nhà, tiền mạng, lương hàng tháng', onTap: () => context.push('/recurring')),
+                _SettingsTile(
+                    icon: Icons.autorenew_rounded,
+                    title: 'Giao dịch lặp lại',
+                    subtitle: 'Tiền nhà, tiền mạng, lương hàng tháng',
+                    onTap: () => context.push('/recurring')),
               ],
             ),
           ),
@@ -110,19 +148,25 @@ class ProfileScreen extends ConsumerWidget {
             child: Column(
               children: [
                 ListTile(
-                  leading: Icon(effectiveDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined),
+                  leading: Icon(effectiveDark
+                      ? Icons.dark_mode_outlined
+                      : Icons.light_mode_outlined),
                   title: const Text('Giao diện'),
                   subtitle: const Text('Đen trắng tối giản'),
                   trailing: DropdownButton<ThemeMode>(
                     value: mode,
                     underline: const SizedBox.shrink(),
                     items: const [
-                      DropdownMenuItem(value: ThemeMode.system, child: Text('Hệ thống')),
-                      DropdownMenuItem(value: ThemeMode.light, child: Text('Sáng')),
-                      DropdownMenuItem(value: ThemeMode.dark, child: Text('Tối')),
+                      DropdownMenuItem(
+                          value: ThemeMode.system, child: Text('Hệ thống')),
+                      DropdownMenuItem(
+                          value: ThemeMode.light, child: Text('Sáng')),
+                      DropdownMenuItem(
+                          value: ThemeMode.dark, child: Text('Tối')),
                     ],
                     onChanged: (value) {
-                      if (value != null) ref.read(themeModeProvider.notifier).setMode(value);
+                      if (value != null)
+                        ref.read(themeModeProvider.notifier).setMode(value);
                     },
                   ),
                 ),
@@ -162,7 +206,11 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _SettingsTile(
+      {required this.icon,
+      required this.title,
+      required this.subtitle,
+      required this.onTap});
   final IconData icon;
   final String title;
   final String subtitle;

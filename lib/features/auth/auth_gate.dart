@@ -12,12 +12,14 @@ class AuthGate extends ConsumerWidget {
     final auth = ref.watch(authStateProvider);
     return auth.when(
       data: (user) => user == null ? const LoginScreen() : const AppShell(),
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => Scaffold(
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text('Không đọc được trạng thái đăng nhập:\n$error', textAlign: TextAlign.center),
+            child: Text('Không đọc được trạng thái đăng nhập:\n$error',
+                textAlign: TextAlign.center),
           ),
         ),
       ),

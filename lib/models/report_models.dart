@@ -23,14 +23,16 @@ class ReportSummary {
 }
 
 class ChartPoint {
-  const ChartPoint({required this.date, required this.income, required this.expense});
+  const ChartPoint(
+      {required this.date, required this.income, required this.expense});
 
   final DateTime date;
   final double income;
   final double expense;
 
   factory ChartPoint.fromJson(Map<String, dynamic> json) => ChartPoint(
-        date: DateTime.tryParse(json['date']?.toString() ?? '') ?? DateTime.now(),
+        date:
+            DateTime.tryParse(json['date']?.toString() ?? '') ?? DateTime.now(),
         income: (json['income'] as num?)?.toDouble() ?? 0,
         expense: (json['expense'] as num?)?.toDouble() ?? 0,
       );

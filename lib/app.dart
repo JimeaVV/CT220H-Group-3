@@ -44,7 +44,8 @@ class _FinTrackAppState extends ConsumerState<FinTrackApp> {
           transaction: state.extra as TransactionModel?,
         ),
       ),
-      GoRoute(path: '/categories', builder: (_, __) => const CategoriesScreen()),
+      GoRoute(
+          path: '/categories', builder: (_, __) => const CategoriesScreen()),
       GoRoute(path: '/wallets', builder: (_, __) => const WalletsScreen()),
       GoRoute(path: '/budgets', builder: (_, __) => const BudgetsScreen()),
       GoRoute(path: '/recurring', builder: (_, __) => const RecurringScreen()),
@@ -105,7 +106,10 @@ class FirebaseSetupScreen extends StatelessWidget {
                   Text(
                     'Cần cấu hình Firebase Android',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 14),
                   const Text(
@@ -117,7 +121,8 @@ class FirebaseSetupScreen extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(18),
                       child: SelectableText(
-                        error?.toString() ?? 'Firebase.initializeApp() chưa thành công.',
+                        error?.toString() ??
+                            'Firebase.initializeApp() chưa thành công.',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),

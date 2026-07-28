@@ -34,7 +34,8 @@ class FinTrackLogo extends StatelessWidget {
           Positioned(
             right: size * 0.14,
             top: size * 0.14,
-            child: Icon(Icons.trending_up_rounded, color: foreground, size: size * 0.28),
+            child: Icon(Icons.trending_up_rounded,
+                color: foreground, size: size * 0.28),
           ),
         ],
       ),

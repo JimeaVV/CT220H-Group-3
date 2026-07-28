@@ -18,7 +18,9 @@ class TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIncome = transaction.type == 'Thu';
-    final icon = transaction.categoryIcon.trim().isEmpty ? (isIncome ? '↗' : '↘') : transaction.categoryIcon;
+    final icon = transaction.categoryIcon.trim().isEmpty
+        ? (isIncome ? '↗' : '↘')
+        : transaction.categoryIcon;
 
     return ListTile(
       onTap: onTap,
@@ -34,12 +36,15 @@ class TransactionTile extends StatelessWidget {
         child: Text(icon, style: const TextStyle(fontSize: 21)),
       ),
       title: Text(
-        transaction.note.trim().isEmpty ? transaction.categoryName : transaction.note,
+        transaction.note.trim().isEmpty
+            ? transaction.categoryName
+            : transaction.note,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w700),
       ),
-      subtitle: Text('${transaction.categoryName} • ${transaction.walletName}\n${formatDateTime(transaction.date)}'),
+      subtitle: Text(
+          '${transaction.categoryName} • ${transaction.walletName}\n${formatDateTime(transaction.date)}'),
       isThreeLine: true,
       trailing: trailing ??
           Text(

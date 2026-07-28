@@ -29,7 +29,8 @@ class TransactionModel {
   final bool isFromRecurring;
   final String? recurringId;
 
-  factory TransactionModel.fromJson(Map<String, dynamic> json) => TransactionModel(
+  factory TransactionModel.fromJson(Map<String, dynamic> json) =>
+      TransactionModel(
         id: json['id']?.toString() ?? '',
         userId: json['userId']?.toString() ?? '',
         walletId: json['walletId']?.toString() ?? '',

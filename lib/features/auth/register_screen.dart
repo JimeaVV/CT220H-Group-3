@@ -42,7 +42,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             password: _passwordController.text,
           );
       if (!mounted) return;
-      showAppSnackBar(context, 'Đăng ký thành công. FinTrack đã gửi email xác minh.');
+      showAppSnackBar(
+          context, 'Đăng ký thành công. FinTrack đã gửi email xác minh.');
       context.go('/');
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
@@ -77,21 +78,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     const SizedBox(height: 34),
                     Text(
                       'Tạo tài khoản mới.',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 26),
                     TextFormField(
                       controller: _nameController,
-                      validator: (value) => Validators.requiredText(value, field: 'Tên hiển thị'),
+                      validator: (value) =>
+                          Validators.requiredText(value, field: 'Tên hiển thị'),
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(labelText: 'Tên hiển thị', prefixIcon: Icon(Icons.person_outline_rounded)),
+                      decoration: const InputDecoration(
+                          labelText: 'Tên hiển thị',
+                          prefixIcon: Icon(Icons.person_outline_rounded)),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _emailController,
                       validator: Validators.email,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline_rounded)),
+                      decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.mail_outline_rounded)),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -103,7 +112,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                          icon: Icon(_obscure
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined),
                         ),
                       ),
                     ),
@@ -112,7 +123,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       controller: _confirmController,
                       obscureText: _obscure,
                       validator: (value) {
-                        if (value != _passwordController.text) return 'Mật khẩu nhập lại không khớp';
+                        if (value != _passwordController.text)
+                          return 'Mật khẩu nhập lại không khớp';
                         return null;
                       },
                       onFieldSubmitted: (_) => _register(),
@@ -125,7 +137,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     FilledButton(
                       onPressed: _loading ? null : _register,
                       child: _loading
-                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2))
                           : const Text('Tạo tài khoản'),
                     ),
                     const SizedBox(height: 14),

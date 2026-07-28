@@ -16,7 +16,8 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
   final TransactionModel? transaction;
 
   @override
-  ConsumerState<TransactionFormScreen> createState() => _TransactionFormScreenState();
+  ConsumerState<TransactionFormScreen> createState() =>
+      _TransactionFormScreenState();
 }
 
 class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
@@ -35,7 +36,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   void initState() {
     super.initState();
     final item = widget.transaction;
-    _amountController = TextEditingController(text: item == null ? '' : item.amount.toString());
+    _amountController =
+        TextEditingController(text: item == null ? '' : item.amount.toString());
     _noteController = TextEditingController(text: item?.note ?? '');
     _type = item?.type ?? 'Chi';
     _date = item?.date.toLocal() ?? DateTime.now();
@@ -59,18 +61,23 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final categoriesAsync = ref.watch(categoriesProvider(userId));
 
     return Scaffold(
-      appBar: AppBar(title: Text(_editing ? 'Sửa giao dịch' : 'Thêm giao dịch')),
+      appBar:
+          AppBar(title: Text(_editing ? 'Sửa giao dịch' : 'Thêm giao dịch')),
       body: walletsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Padding(
           padding: const EdgeInsets.all(18),
-          child: ErrorCard(error: error, onRetry: () => ref.invalidate(walletsProvider(userId))),
+          child: ErrorCard(
+              error: error,
+              onRetry: () => ref.invalidate(walletsProvider(userId))),
         ),
         data: (wallets) => categoriesAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Padding(
             padding: const EdgeInsets.all(18),
-            child: ErrorCard(error: error, onRetry: () => ref.invalidate(categoriesProvider(userId))),
+            child: ErrorCard(
+                error: error,
+                onRetry: () => ref.invalidate(categoriesProvider(userId))),
           ),
           data: (categories) => _buildForm(userId, wallets, categories),
         ),
@@ -78,11 +85,15 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     );
   }
 
-  Widget _buildForm(String userId, List<WalletModel> wallets, List<CategoryModel> categories) {
-    final filteredCategories = categories.where((item) => item.type == _type).toList();
+  Widget _buildForm(String userId, List<WalletModel> wallets,
+      List<CategoryModel> categories) {
+    final filteredCategories =
+        categories.where((item) => item.type == _type).toList();
     if (_walletId == null && wallets.isNotEmpty) _walletId = wallets.first.id;
-    if (_categoryId == null || !filteredCategories.any((item) => item.id == _categoryId)) {
-      _categoryId = filteredCategories.isEmpty ? null : filteredCategories.first.id;
+    if (_categoryId == null ||
+        !filteredCategories.any((item) => item.id == _categoryId)) {
+      _categoryId =
+          filteredCategories.isEmpty ? null : filteredCategories.first.id;
     }
 
     if (wallets.isEmpty) {
@@ -111,8 +122,14 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         children: [
           SegmentedButton<String>(
             segments: const [
-              ButtonSegment(value: 'Chi', label: Text('Khoản chi'), icon: Icon(Icons.north_east_rounded)),
-              ButtonSegment(value: 'Thu', label: Text('Khoản thu'), icon: Icon(Icons.south_west_rounded)),
+              ButtonSegment(
+                  value: 'Chi',
+                  label: Text('Khoản chi'),
+                  icon: Icon(Icons.north_east_rounded)),
+              ButtonSegment(
+                  value: 'Thu',
+                  label: Text('Khoản thu'),
+                  icon: Icon(Icons.south_west_rounded)),
             ],
             selected: {_type},
             onSelectionChanged: (values) {
@@ -127,29 +144,42 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             controller: _amountController,
             autofocus: !_editing,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))
+            ],
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
-            decoration: const InputDecoration(labelText: 'Số tiền', prefixText: '₫  '),
+            decoration:
+                const InputDecoration(labelText: 'Số tiền', prefixText: '₫  '),
             validator: (value) {
               final amount = parseMoneyInput(value ?? '');
-              if (amount == null || amount <= 0) return 'Số tiền phải lớn hơn 0';
+              if (amount == null || amount <= 0)
+                return 'Số tiền phải lớn hơn 0';
               return null;
             },
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             value: _walletId,
-            decoration: const InputDecoration(labelText: 'Ví', prefixIcon: Icon(Icons.account_balance_wallet_outlined)),
-            items: wallets.map((wallet) => DropdownMenuItem(value: wallet.id, child: Text(wallet.name))).toList(),
+            decoration: const InputDecoration(
+                labelText: 'Ví',
+                prefixIcon: Icon(Icons.account_balance_wallet_outlined)),
+            items: wallets
+                .map((wallet) => DropdownMenuItem(
+                    value: wallet.id, child: Text(wallet.name)))
+                .toList(),
             onChanged: (value) => setState(() => _walletId = value),
             validator: (value) => value == null ? 'Hãy chọn ví' : null,
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             value: _categoryId,
-            decoration: const InputDecoration(labelText: 'Danh mục', prefixIcon: Icon(Icons.category_outlined)),
+            decoration: const InputDecoration(
+                labelText: 'Danh mục',
+                prefixIcon: Icon(Icons.category_outlined)),
             items: filteredCategories
-                .map((category) => DropdownMenuItem(value: category.id, child: Text('${category.icon} ${category.name}'.trim())))
+                .map((category) => DropdownMenuItem(
+                    value: category.id,
+                    child: Text('${category.icon} ${category.name}'.trim())))
                 .toList(),
             onChanged: (value) => setState(() => _categoryId = value),
             validator: (value) => value == null ? 'Hãy chọn danh mục' : null,
@@ -159,7 +189,9 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             onTap: _pickDateTime,
             borderRadius: BorderRadius.circular(16),
             child: InputDecorator(
-              decoration: const InputDecoration(labelText: 'Ngày giờ', prefixIcon: Icon(Icons.calendar_month_outlined)),
+              decoration: const InputDecoration(
+                  labelText: 'Ngày giờ',
+                  prefixIcon: Icon(Icons.calendar_month_outlined)),
               child: Text(formatDateTime(_date)),
             ),
           ),
@@ -168,13 +200,21 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             controller: _noteController,
             maxLines: 3,
             maxLength: 200,
-            decoration: const InputDecoration(labelText: 'Ghi chú', alignLabelWithHint: true, prefixIcon: Icon(Icons.notes_rounded)),
+            decoration: const InputDecoration(
+                labelText: 'Ghi chú',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.notes_rounded)),
           ),
           const SizedBox(height: 18),
           FilledButton.icon(
-            onPressed: _saving ? null : () => _save(userId, wallets, filteredCategories),
+            onPressed: _saving
+                ? null
+                : () => _save(userId, wallets, filteredCategories),
             icon: _saving
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check_rounded),
             label: Text(_editing ? 'Lưu thay đổi' : 'Thêm giao dịch'),
           ),
@@ -197,11 +237,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     );
     if (selectedTime == null) return;
     setState(() {
-      _date = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, selectedTime.hour, selectedTime.minute);
+      _date = DateTime(selectedDate.year, selectedDate.month, selectedDate.day,
+          selectedTime.hour, selectedTime.minute);
     });
   }
 
-  Future<void> _save(String userId, List<WalletModel> wallets, List<CategoryModel> categories) async {
+  Future<void> _save(String userId, List<WalletModel> wallets,
+      List<CategoryModel> categories) async {
     if (!_formKey.currentState!.validate()) return;
     final wallet = wallets.firstWhere((item) => item.id == _walletId);
     final category = categories.firstWhere((item) => item.id == _categoryId);
@@ -230,7 +272,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       }
       invalidateFinanceData(ref, userId);
       if (!mounted) return;
-      showAppSnackBar(context, _editing ? 'Đã cập nhật giao dịch.' : 'Đã thêm giao dịch.');
+      showAppSnackBar(
+          context, _editing ? 'Đã cập nhật giao dịch.' : 'Đã thêm giao dịch.');
       context.pop();
     } catch (error) {
       if (mounted) showAppSnackBar(context, error.toString(), isError: true);

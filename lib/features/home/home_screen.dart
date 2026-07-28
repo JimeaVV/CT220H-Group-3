@@ -33,7 +33,10 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const FinTrackLogo(size: 38, showName: true),
         actions: [
-          IconButton(onPressed: refresh, icon: const Icon(Icons.refresh_rounded), tooltip: 'Làm mới'),
+          IconButton(
+              onPressed: refresh,
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: 'Làm mới'),
           const SizedBox(width: 6),
         ],
       ),
@@ -44,15 +47,21 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Text(
               'Xin chào, ${user.displayName?.trim().isNotEmpty == true ? user.displayName!.trim().split(' ').last : 'bạn'}',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.6),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.6),
             ),
             const SizedBox(height: 4),
-            Text('Đây là tình hình tài chính của bạn hôm nay.', style: Theme.of(context).textTheme.bodyMedium),
+            Text('Đây là tình hình tài chính của bạn hôm nay.',
+                style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 22),
             summary.when(
               data: (data) => _BalanceCard(summary: data),
               loading: () => const _LoadingCard(height: 190),
-              error: (error, _) => ErrorCard(error: error, onRetry: () => ref.invalidate(summaryProvider(userId))),
+              error: (error, _) => ErrorCard(
+                  error: error,
+                  onRetry: () => ref.invalidate(summaryProvider(userId))),
             ),
             const SizedBox(height: 24),
             const SectionHeader(title: 'Ví của bạn'),
@@ -84,15 +93,29 @@ class HomeScreen extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: Theme.of(context).cardTheme.color,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Theme.of(context).dividerColor),
+                            border: Border.all(
+                                color: Theme.of(context).dividerColor),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(children: [const Icon(Icons.wallet_outlined, size: 18), const SizedBox(width: 8), Expanded(child: Text(wallet.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)))]),
+                              Row(children: [
+                                const Icon(Icons.wallet_outlined, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                    child: Text(wallet.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w700)))
+                              ]),
                               const Spacer(),
-                              Text(formatMoney(wallet.balance), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                              Text(wallet.type, style: Theme.of(context).textTheme.bodySmall),
+                              Text(formatMoney(wallet.balance),
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900)),
+                              Text(wallet.type,
+                                  style: Theme.of(context).textTheme.bodySmall),
                             ],
                           ),
                         ),
@@ -102,7 +125,9 @@ class HomeScreen extends ConsumerWidget {
                 );
               },
               loading: () => const _LoadingCard(height: 116),
-              error: (error, _) => ErrorCard(error: error, onRetry: () => ref.invalidate(walletsProvider(userId))),
+              error: (error, _) => ErrorCard(
+                  error: error,
+                  onRetry: () => ref.invalidate(walletsProvider(userId))),
             ),
             const SizedBox(height: 26),
             const SectionHeader(title: 'Quản lý nhanh'),
@@ -115,14 +140,29 @@ class HomeScreen extends ConsumerWidget {
               crossAxisSpacing: 12,
               childAspectRatio: 1.75,
               children: [
-                _QuickAction(icon: Icons.account_balance_wallet_outlined, label: 'Ví tiền', onTap: () => context.push('/wallets')),
-                _QuickAction(icon: Icons.category_outlined, label: 'Danh mục', onTap: () => context.push('/categories')),
-                _QuickAction(icon: Icons.savings_outlined, label: 'Ngân sách', onTap: () => context.push('/budgets')),
-                _QuickAction(icon: Icons.autorenew_rounded, label: 'Giao dịch lặp', onTap: () => context.push('/recurring')),
+                _QuickAction(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: 'Ví tiền',
+                    onTap: () => context.push('/wallets')),
+                _QuickAction(
+                    icon: Icons.category_outlined,
+                    label: 'Danh mục',
+                    onTap: () => context.push('/categories')),
+                _QuickAction(
+                    icon: Icons.savings_outlined,
+                    label: 'Ngân sách',
+                    onTap: () => context.push('/budgets')),
+                _QuickAction(
+                    icon: Icons.autorenew_rounded,
+                    label: 'Giao dịch lặp',
+                    onTap: () => context.push('/recurring')),
               ],
             ),
             const SizedBox(height: 26),
-            SectionHeader(title: 'Giao dịch gần đây', actionLabel: 'Thêm mới', onAction: () => context.push('/transaction/new')),
+            SectionHeader(
+                title: 'Giao dịch gần đây',
+                actionLabel: 'Thêm mới',
+                onAction: () => context.push('/transaction/new')),
             const SizedBox(height: 4),
             transactions.when(
               data: (items) {
@@ -136,12 +176,14 @@ class HomeScreen extends ConsumerWidget {
                 }
                 return Card(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     child: Column(
                       children: [
                         for (final item in items.take(5)) ...[
                           TransactionTile(transaction: item),
-                          if (item != items.take(5).last) const Divider(height: 1),
+                          if (item != items.take(5).last)
+                            const Divider(height: 1),
                         ],
                       ],
                     ),
@@ -149,7 +191,9 @@ class HomeScreen extends ConsumerWidget {
                 );
               },
               loading: () => const _LoadingCard(height: 220),
-              error: (error, _) => ErrorCard(error: error, onRetry: () => ref.invalidate(transactionsProvider(userId))),
+              error: (error, _) => ErrorCard(
+                  error: error,
+                  onRetry: () => ref.invalidate(transactionsProvider(userId))),
             ),
           ],
         ),
@@ -174,23 +218,43 @@ class _BalanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Tổng số dư', style: TextStyle(color: isDark ? Colors.black54 : Colors.white70, fontWeight: FontWeight.w600)),
+          Text('Tổng số dư',
+              style: TextStyle(
+                  color: isDark ? Colors.black54 : Colors.white70,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
               formatMoney(summary.currentBalance),
-              style: TextStyle(color: isDark ? Colors.black : Colors.white, fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: -1.3),
+              style: TextStyle(
+                  color: isDark ? Colors.black : Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.3),
             ),
           ),
           const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: _SummaryItem(label: 'Thu tháng ${summary.month}', value: summary.totalIncome, icon: Icons.south_west_rounded, darkCard: isDark)),
-              Container(width: 1, height: 44, color: isDark ? Colors.black12 : Colors.white24),
+              Expanded(
+                  child: _SummaryItem(
+                      label: 'Thu tháng ${summary.month}',
+                      value: summary.totalIncome,
+                      icon: Icons.south_west_rounded,
+                      darkCard: isDark)),
+              Container(
+                  width: 1,
+                  height: 44,
+                  color: isDark ? Colors.black12 : Colors.white24),
               const SizedBox(width: 16),
-              Expanded(child: _SummaryItem(label: 'Chi tháng ${summary.month}', value: summary.totalExpense, icon: Icons.north_east_rounded, darkCard: isDark)),
+              Expanded(
+                  child: _SummaryItem(
+                      label: 'Chi tháng ${summary.month}',
+                      value: summary.totalExpense,
+                      icon: Icons.north_east_rounded,
+                      darkCard: isDark)),
             ],
           ),
         ],
@@ -200,7 +264,11 @@ class _BalanceCard extends StatelessWidget {
 }
 
 class _SummaryItem extends StatelessWidget {
-  const _SummaryItem({required this.label, required this.value, required this.icon, required this.darkCard});
+  const _SummaryItem(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      required this.darkCard});
   final String label;
   final double value;
   final IconData icon;
@@ -217,9 +285,18 @@ class _SummaryItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color.withOpacity(0.6), fontSize: 11)),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style:
+                      TextStyle(color: color.withOpacity(0.6), fontSize: 11)),
               const SizedBox(height: 3),
-              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(formatMoney(value), style: TextStyle(color: color, fontWeight: FontWeight.w800))),
+              FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(formatMoney(value),
+                      style: TextStyle(
+                          color: color, fontWeight: FontWeight.w800))),
             ],
           ),
         ),
@@ -229,7 +306,8 @@ class _SummaryItem extends StatelessWidget {
 }
 
 class _QuickAction extends StatelessWidget {
-  const _QuickAction({required this.icon, required this.label, required this.onTap});
+  const _QuickAction(
+      {required this.icon, required this.label, required this.onTap});
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -242,7 +320,13 @@ class _QuickAction extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(children: [Icon(icon), const SizedBox(width: 12), Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)))]),
+          child: Row(children: [
+            Icon(icon),
+            const SizedBox(width: 12),
+            Expanded(
+                child: Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.w800)))
+          ]),
         ),
       ),
     );
@@ -250,7 +334,11 @@ class _QuickAction extends StatelessWidget {
 }
 
 class _InlineActionCard extends StatelessWidget {
-  const _InlineActionCard({required this.icon, required this.title, required this.message, required this.onTap});
+  const _InlineActionCard(
+      {required this.icon,
+      required this.title,
+      required this.message,
+      required this.onTap});
   final IconData icon;
   final String title;
   final String message;
@@ -268,7 +356,15 @@ class _InlineActionCard extends StatelessWidget {
             children: [
               Icon(icon, size: 28),
               const SizedBox(width: 14),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 3), Text(message, style: Theme.of(context).textTheme.bodySmall)])),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(title,
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(message, style: Theme.of(context).textTheme.bodySmall)
+                  ])),
               const Icon(Icons.chevron_right_rounded),
             ],
           ),

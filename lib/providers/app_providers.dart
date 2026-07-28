@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_client.dart';
 import '../models/budget_model.dart';
 import '../models/category_model.dart';
@@ -33,7 +32,8 @@ final currentUserProvider = Provider<User?>((ref) {
   return ref.watch(authStateProvider).asData?.value;
 });
 
-final themeModeProvider = StateNotifierProvider<ThemeModeController, ThemeMode>((ref) {
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeController, ThemeMode>((ref) {
   return ThemeModeController();
 });
 
@@ -44,8 +44,10 @@ class ThemeModeController extends StateNotifier<ThemeMode> {
 
   static const _key = 'fintrack_theme_mode';
 
+  get sharedPreferences => null;
+
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await sharedPreferences.getInstance();
     final stored = prefs.getString(_key);
     state = switch (stored) {
       'light' => ThemeMode.light,
@@ -56,26 +58,31 @@ class ThemeModeController extends StateNotifier<ThemeMode> {
 
   Future<void> setMode(ThemeMode mode) async {
     state = mode;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await sharedPreferences.getInstance();
     await prefs.setString(_key, mode.name);
   }
 
-  Future<void> toggle(bool dark) => setMode(dark ? ThemeMode.dark : ThemeMode.light);
+  Future<void> toggle(bool dark) =>
+      setMode(dark ? ThemeMode.dark : ThemeMode.light);
 }
 
-final categoriesProvider = FutureProvider.autoDispose.family<List<CategoryModel>, String>((ref, userId) {
+final categoriesProvider = FutureProvider.autoDispose
+    .family<List<CategoryModel>, String>((ref, userId) {
   return ref.watch(financeRepositoryProvider).getCategories(userId);
 });
 
-final walletsProvider = FutureProvider.autoDispose.family<List<WalletModel>, String>((ref, userId) {
+final walletsProvider =
+    FutureProvider.autoDispose.family<List<WalletModel>, String>((ref, userId) {
   return ref.watch(financeRepositoryProvider).getWallets(userId);
 });
 
-final transactionsProvider = FutureProvider.autoDispose.family<List<TransactionModel>, String>((ref, userId) {
+final transactionsProvider = FutureProvider.autoDispose
+    .family<List<TransactionModel>, String>((ref, userId) {
   return ref.watch(financeRepositoryProvider).getTransactions(userId);
 });
 
-final summaryProvider = FutureProvider.autoDispose.family<ReportSummary, String>((ref, userId) {
+final summaryProvider =
+    FutureProvider.autoDispose.family<ReportSummary, String>((ref, userId) {
   return ref.watch(financeRepositoryProvider).getSummary(userId);
 });
 
@@ -92,8 +99,11 @@ class ChartRequest {
   int get hashCode => Object.hash(userId, period);
 }
 
-final chartProvider = FutureProvider.autoDispose.family<List<ChartPoint>, ChartRequest>((ref, request) {
-  return ref.watch(financeRepositoryProvider).getChart(request.userId, request.period);
+final chartProvider = FutureProvider.autoDispose
+    .family<List<ChartPoint>, ChartRequest>((ref, request) {
+  return ref
+      .watch(financeRepositoryProvider)
+      .getChart(request.userId, request.period);
 });
 
 class BudgetRequest {
@@ -113,8 +123,8 @@ class BudgetRequest {
   int get hashCode => Object.hash(userId, month, year);
 }
 
-final budgetStatusProvider =
-    FutureProvider.autoDispose.family<List<BudgetStatusModel>, BudgetRequest>((ref, request) {
+final budgetStatusProvider = FutureProvider.autoDispose
+    .family<List<BudgetStatusModel>, BudgetRequest>((ref, request) {
   return ref.watch(financeRepositoryProvider).getBudgetStatus(
         userId: request.userId,
         month: request.month,
@@ -122,8 +132,8 @@ final budgetStatusProvider =
       );
 });
 
-final recurringProvider =
-    FutureProvider.autoDispose.family<List<RecurringTransactionModel>, String>((ref, userId) {
+final recurringProvider = FutureProvider.autoDispose
+    .family<List<RecurringTransactionModel>, String>((ref, userId) {
   return ref.watch(financeRepositoryProvider).getRecurringTransactions(userId);
 });
 
@@ -134,5 +144,6 @@ void invalidateFinanceData(WidgetRef ref, String userId) {
   ref.invalidate(chartProvider(ChartRequest(userId, 'week')));
   ref.invalidate(chartProvider(ChartRequest(userId, 'month')));
   final now = DateTime.now();
-  ref.invalidate(budgetStatusProvider(BudgetRequest(userId, now.month, now.year)));
+  ref.invalidate(
+      budgetStatusProvider(BudgetRequest(userId, now.month, now.year)));
 }

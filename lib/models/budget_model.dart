@@ -21,7 +21,8 @@ class BudgetStatusModel {
   final bool isExceeded;
   final bool isWarning;
 
-  factory BudgetStatusModel.fromJson(Map<String, dynamic> json) => BudgetStatusModel(
+  factory BudgetStatusModel.fromJson(Map<String, dynamic> json) =>
+      BudgetStatusModel(
         budgetId: json['budgetId']?.toString() ?? json['id']?.toString() ?? '',
         categoryId: json['categoryId']?.toString() ?? '',
         categoryName: json['categoryName']?.toString() ?? '',

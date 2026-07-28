@@ -30,7 +30,9 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
       appBar: AppBar(
         title: const Text('Ngân sách'),
         actions: [
-          IconButton(onPressed: () => _showBudgetForm(userId), icon: const Icon(Icons.add_rounded)),
+          IconButton(
+              onPressed: () => _showBudgetForm(userId),
+              icon: const Icon(Icons.add_rounded)),
           const SizedBox(width: 6),
         ],
       ),
@@ -44,8 +46,13 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                   child: DropdownButtonFormField<int>(
                     value: _month,
                     decoration: const InputDecoration(labelText: 'Tháng'),
-                    items: List.generate(12, (index) => DropdownMenuItem(value: index + 1, child: Text('Tháng ${index + 1}'))),
-                    onChanged: (value) => setState(() => _month = value ?? _month),
+                    items: List.generate(
+                        12,
+                        (index) => DropdownMenuItem(
+                            value: index + 1,
+                            child: Text('Tháng ${index + 1}'))),
+                    onChanged: (value) =>
+                        setState(() => _month = value ?? _month),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -55,9 +62,11 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                     decoration: const InputDecoration(labelText: 'Năm'),
                     items: List.generate(7, (index) {
                       final year = DateTime.now().year - 2 + index;
-                      return DropdownMenuItem(value: year, child: Text('$year'));
+                      return DropdownMenuItem(
+                          value: year, child: Text('$year'));
                     }),
-                    onChanged: (value) => setState(() => _year = value ?? _year),
+                    onChanged: (value) =>
+                        setState(() => _year = value ?? _year),
                   ),
                 ),
               ],
@@ -68,20 +77,26 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Padding(
                 padding: const EdgeInsets.all(18),
-                child: ErrorCard(error: error, onRetry: () => ref.invalidate(budgetStatusProvider(request))),
+                child: ErrorCard(
+                    error: error,
+                    onRetry: () =>
+                        ref.invalidate(budgetStatusProvider(request))),
               ),
               data: (items) {
                 if (items.isEmpty) {
                   return EmptyState(
                     icon: Icons.savings_outlined,
                     title: 'Chưa đặt ngân sách',
-                    message: 'Đặt giới hạn cho từng danh mục chi trong tháng $_month/$_year.',
+                    message:
+                        'Đặt giới hạn cho từng danh mục chi trong tháng $_month/$_year.',
                     actionLabel: 'Thêm ngân sách',
                     onAction: () => _showBudgetForm(userId),
                   );
                 }
-                final totalLimit = items.fold<double>(0, (sum, item) => sum + item.amountLimit);
-                final totalSpent = items.fold<double>(0, (sum, item) => sum + item.totalSpent);
+                final totalLimit = items.fold<double>(
+                    0, (sum, item) => sum + item.amountLimit);
+                final totalSpent =
+                    items.fold<double>(0, (sum, item) => sum + item.totalSpent);
                 return RefreshIndicator(
                   onRefresh: () async {
                     ref.invalidate(budgetStatusProvider(request));
@@ -90,7 +105,10 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(18, 6, 18, 100),
                     children: [
-                      _BudgetOverview(totalLimit: totalLimit, totalSpent: totalSpent, month: _month),
+                      _BudgetOverview(
+                          totalLimit: totalLimit,
+                          totalSpent: totalSpent,
+                          month: _month),
                       const SizedBox(height: 22),
                       const SectionHeader(title: 'Theo danh mục'),
                       const SizedBox(height: 10),
@@ -98,7 +116,8 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _BudgetCard(
                               item: item,
-                              onEdit: () => _showBudgetForm(userId, existing: item),
+                              onEdit: () =>
+                                  _showBudgetForm(userId, existing: item),
                               onDelete: () => _deleteBudget(userId, item),
                             ),
                           )),
@@ -118,23 +137,29 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
     );
   }
 
-  Future<void> _showBudgetForm(String userId, {BudgetStatusModel? existing}) async {
+  Future<void> _showBudgetForm(String userId,
+      {BudgetStatusModel? existing}) async {
     List<CategoryModel> categories;
     try {
-      categories = (await ref.read(categoriesProvider(userId).future)).where((item) => item.type == 'Chi').toList();
+      categories = (await ref.read(categoriesProvider(userId).future))
+          .where((item) => item.type == 'Chi')
+          .toList();
     } catch (error) {
       if (mounted) showAppSnackBar(context, error.toString(), isError: true);
       return;
     }
     if (categories.isEmpty) {
-      if (mounted) showAppSnackBar(context, 'Chưa có danh mục chi.', isError: true);
+      if (mounted)
+        showAppSnackBar(context, 'Chưa có danh mục chi.', isError: true);
       return;
     }
 
-    final amountController = TextEditingController(text: existing?.amountLimit.toString() ?? '');
+    final amountController =
+        TextEditingController(text: existing?.amountLimit.toString() ?? '');
     final formKey = GlobalKey<FormState>();
     var categoryId = existing?.categoryId;
-    if (!categories.any((item) => item.id == categoryId)) categoryId = categories.first.id;
+    if (!categories.any((item) => item.id == categoryId))
+      categoryId = categories.first.id;
     var month = _month;
     var year = _year;
 
@@ -143,31 +168,45 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.viewInsetsOf(context).bottom + 24),
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.viewInsetsOf(context).bottom + 24),
           child: Form(
             key: formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(existing == null ? 'Đặt ngân sách' : 'Sửa ngân sách', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+                Text(existing == null ? 'Đặt ngân sách' : 'Sửa ngân sách',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 20),
                 DropdownButtonFormField<String>(
                   value: categoryId,
                   decoration: const InputDecoration(labelText: 'Danh mục chi'),
-                  items: categories.map((item) => DropdownMenuItem(value: item.id, child: Text('${item.icon} ${item.name}'.trim()))).toList(),
+                  items: categories
+                      .map((item) => DropdownMenuItem(
+                          value: item.id,
+                          child: Text('${item.icon} ${item.name}'.trim())))
+                      .toList(),
                   onChanged: (value) => setModalState(() => categoryId = value),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: amountController,
                   autofocus: true,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-                  decoration: const InputDecoration(labelText: 'Hạn mức', prefixText: '₫  '),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))
+                  ],
+                  decoration: const InputDecoration(
+                      labelText: 'Hạn mức', prefixText: '₫  '),
                   validator: (value) {
                     final amount = parseMoneyInput(value ?? '');
-                    if (amount == null || amount <= 0) return 'Hạn mức phải lớn hơn 0';
+                    if (amount == null || amount <= 0)
+                      return 'Hạn mức phải lớn hơn 0';
                     return null;
                   },
                 ),
@@ -178,8 +217,12 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                       child: DropdownButtonFormField<int>(
                         value: month,
                         decoration: const InputDecoration(labelText: 'Tháng'),
-                        items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}'))),
-                        onChanged: (value) => setModalState(() => month = value ?? month),
+                        items: List.generate(
+                            12,
+                            (i) => DropdownMenuItem(
+                                value: i + 1, child: Text('${i + 1}'))),
+                        onChanged: (value) =>
+                            setModalState(() => month = value ?? month),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -189,9 +232,11 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                         decoration: const InputDecoration(labelText: 'Năm'),
                         items: List.generate(7, (i) {
                           final option = DateTime.now().year - 2 + i;
-                          return DropdownMenuItem(value: option, child: Text('$option'));
+                          return DropdownMenuItem(
+                              value: option, child: Text('$option'));
                         }),
-                        onChanged: (value) => setModalState(() => year = value ?? year),
+                        onChanged: (value) =>
+                            setModalState(() => year = value ?? year),
                       ),
                     ),
                   ],
@@ -199,9 +244,11 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                 const SizedBox(height: 22),
                 FilledButton(
                   onPressed: () {
-                    if (formKey.currentState!.validate()) Navigator.pop(context, true);
+                    if (formKey.currentState!.validate())
+                      Navigator.pop(context, true);
                   },
-                  child: Text(existing == null ? 'Tạo ngân sách' : 'Lưu thay đổi'),
+                  child:
+                      Text(existing == null ? 'Tạo ngân sách' : 'Lưu thay đổi'),
                 ),
               ],
             ),
@@ -237,12 +284,17 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
         );
       }
       ref.invalidate(budgetStatusProvider(BudgetRequest(userId, month, year)));
-      if (month != _month || year != _year) setState(() { _month = month; _year = year; });
-      if (mounted) showAppSnackBar(context, existing == null ? 'Đã tạo ngân sách.' : 'Đã cập nhật ngân sách.');
+      if (month != _month || year != _year)
+        setState(() {
+          _month = month;
+          _year = year;
+        });
+      if (mounted)
+        showAppSnackBar(context,
+            existing == null ? 'Đã tạo ngân sách.' : 'Đã cập nhật ngân sách.');
     } catch (error) {
       if (mounted) showAppSnackBar(context, error.toString(), isError: true);
-    } finally {
-    }
+    } finally {}
   }
 
   Future<void> _deleteBudget(String userId, BudgetStatusModel item) async {
@@ -254,7 +306,8 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
     if (!confirmed) return;
     try {
       await ref.read(financeRepositoryProvider).deleteBudget(item.budgetId);
-      ref.invalidate(budgetStatusProvider(BudgetRequest(userId, _month, _year)));
+      ref.invalidate(
+          budgetStatusProvider(BudgetRequest(userId, _month, _year)));
       if (mounted) showAppSnackBar(context, 'Đã xóa ngân sách.');
     } catch (error) {
       if (mounted) showAppSnackBar(context, error.toString(), isError: true);
@@ -263,30 +316,44 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
 }
 
 class _BudgetOverview extends StatelessWidget {
-  const _BudgetOverview({required this.totalLimit, required this.totalSpent, required this.month});
+  const _BudgetOverview(
+      {required this.totalLimit,
+      required this.totalSpent,
+      required this.month});
   final double totalLimit;
   final double totalSpent;
   final int month;
 
   @override
   Widget build(BuildContext context) {
-    final progress = totalLimit <= 0 ? 0.0 : (totalSpent / totalLimit).clamp(0.0, 1.0);
+    final progress =
+        totalLimit <= 0 ? 0.0 : (totalSpent / totalLimit).clamp(0.0, 1.0);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tổng ngân sách tháng $month', style: Theme.of(context).textTheme.bodySmall),
+            Text('Tổng ngân sách tháng $month',
+                style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 8),
-            FittedBox(child: Text(formatMoney(totalLimit), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900))),
+            FittedBox(
+                child: Text(formatMoney(totalLimit),
+                    style: const TextStyle(
+                        fontSize: 28, fontWeight: FontWeight.w900))),
             const SizedBox(height: 18),
-            LinearProgressIndicator(value: progress, minHeight: 9, borderRadius: BorderRadius.circular(99)),
+            LinearProgressIndicator(
+                value: progress,
+                minHeight: 9,
+                borderRadius: BorderRadius.circular(99)),
             const SizedBox(height: 10),
             Row(
               children: [
-                Expanded(child: Text('Đã chi ${formatMoney(totalSpent)}', style: Theme.of(context).textTheme.bodySmall)),
-                Text('${(progress * 100).toStringAsFixed(1)}%', style: const TextStyle(fontWeight: FontWeight.w800)),
+                Expanded(
+                    child: Text('Đã chi ${formatMoney(totalSpent)}',
+                        style: Theme.of(context).textTheme.bodySmall)),
+                Text('${(progress * 100).toStringAsFixed(1)}%',
+                    style: const TextStyle(fontWeight: FontWeight.w800)),
               ],
             ),
           ],
@@ -297,7 +364,8 @@ class _BudgetOverview extends StatelessWidget {
 }
 
 class _BudgetCard extends StatelessWidget {
-  const _BudgetCard({required this.item, required this.onEdit, required this.onDelete});
+  const _BudgetCard(
+      {required this.item, required this.onEdit, required this.onDelete});
   final BudgetStatusModel item;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -313,13 +381,17 @@ class _BudgetCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Text(item.categoryName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900))),
+                Expanded(
+                    child: Text(item.categoryName,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w900))),
                 if (item.isExceeded)
                   const Chip(label: Text('Vượt mức'))
                 else if (item.isWarning)
                   const Chip(label: Text('Sắp hết')),
                 PopupMenuButton<String>(
-                  onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
+                  onSelected: (value) =>
+                      value == 'edit' ? onEdit() : onDelete(),
                   itemBuilder: (_) => const [
                     PopupMenuItem(value: 'edit', child: Text('Sửa')),
                     PopupMenuItem(value: 'delete', child: Text('Xóa')),
@@ -328,12 +400,18 @@ class _BudgetCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text('${formatMoney(item.totalSpent)} / ${formatMoney(item.amountLimit)}'),
+            Text(
+                '${formatMoney(item.totalSpent)} / ${formatMoney(item.amountLimit)}'),
             const SizedBox(height: 12),
-            LinearProgressIndicator(value: progress, minHeight: 8, borderRadius: BorderRadius.circular(99)),
+            LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                borderRadius: BorderRadius.circular(99)),
             const SizedBox(height: 9),
             Text(
-              item.remaining >= 0 ? 'Còn lại ${formatMoney(item.remaining)}' : 'Đã vượt ${formatMoney(item.remaining.abs())}',
+              item.remaining >= 0
+                  ? 'Còn lại ${formatMoney(item.remaining)}'
+                  : 'Đã vượt ${formatMoney(item.remaining.abs())}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],

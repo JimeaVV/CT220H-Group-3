@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../network/api_exception.dart';
 
 class SectionHeader extends StatelessWidget {
-  const SectionHeader({super.key, required this.title, this.actionLabel, this.onAction});
+  const SectionHeader(
+      {super.key, required this.title, this.actionLabel, this.onAction});
 
   final String title;
   final String? actionLabel;
@@ -56,15 +57,22 @@ class EmptyState extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
+                color:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(icon, size: 32),
             ),
             const SizedBox(height: 18),
-            Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+            Text(title,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium),
             if (actionLabel != null) ...[
               const SizedBox(height: 18),
               FilledButton(onPressed: onAction, child: Text(actionLabel!)),
@@ -95,7 +103,8 @@ class ErrorCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(child: Text(message)),
             if (onRetry != null)
-              IconButton(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded)),
+              IconButton(
+                  onPressed: onRetry, icon: const Icon(Icons.refresh_rounded)),
           ],
         ),
       ),
@@ -114,10 +123,14 @@ Future<bool> showDeleteConfirmation(
           title: Text(title),
           content: Text(message),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Hủy')),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+              style: FilledButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  foregroundColor: Colors.white),
               child: const Text('Xóa'),
             ),
           ],
@@ -126,7 +139,8 @@ Future<bool> showDeleteConfirmation(
       false;
 }
 
-void showAppSnackBar(BuildContext context, String message, {bool isError = false}) {
+void showAppSnackBar(BuildContext context, String message,
+    {bool isError = false}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(

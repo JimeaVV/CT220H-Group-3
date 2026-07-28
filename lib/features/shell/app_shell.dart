@@ -39,11 +39,39 @@ class _AppShellState extends State<AppShell> {
         notchMargin: 8,
         child: Row(
           children: [
-            Expanded(child: _NavButton(index: 0, currentIndex: _index, icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Tổng quan', onTap: _select)),
-            Expanded(child: _NavButton(index: 1, currentIndex: _index, icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long_rounded, label: 'Giao dịch', onTap: _select)),
+            Expanded(
+                child: _NavButton(
+                    index: 0,
+                    currentIndex: _index,
+                    icon: Icons.home_outlined,
+                    selectedIcon: Icons.home_rounded,
+                    label: 'Tổng quan',
+                    onTap: _select)),
+            Expanded(
+                child: _NavButton(
+                    index: 1,
+                    currentIndex: _index,
+                    icon: Icons.receipt_long_outlined,
+                    selectedIcon: Icons.receipt_long_rounded,
+                    label: 'Giao dịch',
+                    onTap: _select)),
             const SizedBox(width: 66),
-            Expanded(child: _NavButton(index: 2, currentIndex: _index, icon: Icons.bar_chart_outlined, selectedIcon: Icons.bar_chart_rounded, label: 'Báo cáo', onTap: _select)),
-            Expanded(child: _NavButton(index: 3, currentIndex: _index, icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded, label: 'Cá nhân', onTap: _select)),
+            Expanded(
+                child: _NavButton(
+                    index: 2,
+                    currentIndex: _index,
+                    icon: Icons.bar_chart_outlined,
+                    selectedIcon: Icons.bar_chart_rounded,
+                    label: 'Báo cáo',
+                    onTap: _select)),
+            Expanded(
+                child: _NavButton(
+                    index: 3,
+                    currentIndex: _index,
+                    icon: Icons.person_outline_rounded,
+                    selectedIcon: Icons.person_rounded,
+                    label: 'Cá nhân',
+                    onTap: _select)),
           ],
         ),
       ),
@@ -86,7 +114,9 @@ class _NavButton extends StatelessWidget {
             Text(
               label,
               maxLines: 1,
-              style: TextStyle(fontSize: 10.5, fontWeight: selected ? FontWeight.w800 : FontWeight.w500),
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500),
             ),
           ],
         ),
