@@ -84,7 +84,12 @@ class FinanceRepository {
     try {
       final response = await _dio.post(
         '/wallets/',
-        data: {'userId': userId, 'name': name, 'type': type, 'balance': balance},
+        data: {
+          'userId': userId,
+          'name': name,
+          'type': type,
+          'balance': balance
+        },
       );
       return WalletModel.fromJson(_mapData(response));
     } catch (error) {
@@ -149,19 +154,23 @@ class FinanceRepository {
     }
   }
 
-  Future<TransactionModel> createTransaction(TransactionModel transaction) async {
+  Future<TransactionModel> createTransaction(
+      TransactionModel transaction) async {
     try {
-      final response = await _dio.post('/transactions/', data: transaction.toPayload());
+      final response =
+          await _dio.post('/transactions/', data: transaction.toPayload());
       return TransactionModel.fromJson(_mapData(response));
     } catch (error) {
       throw mapApiException(error);
     }
   }
 
-  Future<TransactionModel> updateTransaction(TransactionModel transaction) async {
+  Future<TransactionModel> updateTransaction(
+      TransactionModel transaction) async {
     try {
       final payload = transaction.toPayload()..remove('userId');
-      final response = await _dio.put('/transactions/${transaction.id}', data: payload);
+      final response =
+          await _dio.put('/transactions/${transaction.id}', data: payload);
       return TransactionModel.fromJson(_mapData(response));
     } catch (error) {
       throw mapApiException(error);
@@ -270,10 +279,12 @@ class FinanceRepository {
     }
   }
 
-  Future<List<RecurringTransactionModel>> getRecurringTransactions(String userId) async {
+  Future<List<RecurringTransactionModel>> getRecurringTransactions(
+      String userId) async {
     try {
       final response = await _dio.get('/recurring_transactions/user/$userId');
-      final items = _listData(response).map(RecurringTransactionModel.fromJson).toList();
+      final items =
+          _listData(response).map(RecurringTransactionModel.fromJson).toList();
       items.sort((a, b) => a.nextTriggerDate.compareTo(b.nextTriggerDate));
       return items;
     } catch (error) {

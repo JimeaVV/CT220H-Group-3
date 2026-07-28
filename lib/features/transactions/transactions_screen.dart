@@ -40,7 +40,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Padding(
           padding: const EdgeInsets.all(18),
-          child: ErrorCard(error: error, onRetry: () => ref.invalidate(transactionsProvider(userId))),
+          child: ErrorCard(
+              error: error,
+              onRetry: () => ref.invalidate(transactionsProvider(userId))),
         ),
         data: (items) {
           final filtered = items.where((item) {
@@ -52,8 +54,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 item.walletName.toLowerCase().contains(needle);
             return matchesType && matchesQuery;
           }).toList();
-          final income = filtered.where((e) => e.type == 'Thu').fold<double>(0, (sum, e) => sum + e.amount);
-          final expense = filtered.where((e) => e.type == 'Chi').fold<double>(0, (sum, e) => sum + e.amount);
+          final income = filtered
+              .where((e) => e.type == 'Thu')
+              .fold<double>(0, (sum, e) => sum + e.amount);
+          final expense = filtered
+              .where((e) => e.type == 'Chi')
+              .fold<double>(0, (sum, e) => sum + e.amount);
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -78,14 +84,23 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     ButtonSegment(value: 'Chi', label: Text('Chi')),
                   ],
                   selected: {_filter},
-                  onSelectionChanged: (value) => setState(() => _filter = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => _filter = value.first),
                 ),
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    Expanded(child: _TotalCard(label: 'Tổng thu', value: income, icon: Icons.south_west_rounded)),
+                    Expanded(
+                        child: _TotalCard(
+                            label: 'Tổng thu',
+                            value: income,
+                            icon: Icons.south_west_rounded)),
                     const SizedBox(width: 12),
-                    Expanded(child: _TotalCard(label: 'Tổng chi', value: expense, icon: Icons.north_east_rounded)),
+                    Expanded(
+                        child: _TotalCard(
+                            label: 'Tổng chi',
+                            value: expense,
+                            icon: Icons.north_east_rounded)),
                   ],
                 ),
                 const SizedBox(height: 22),
@@ -102,22 +117,28 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 else
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
                       child: Column(
                         children: [
                           for (var i = 0; i < filtered.length; i++) ...[
                             TransactionTile(
                               transaction: filtered[i],
-                              onTap: () => context.push('/transaction/edit', extra: filtered[i]),
+                              onTap: () => context.push('/transaction/edit',
+                                  extra: filtered[i]),
                               trailing: PopupMenuButton<String>(
-                                onSelected: (action) => _handleAction(action, filtered[i], userId),
+                                onSelected: (action) =>
+                                    _handleAction(action, filtered[i], userId),
                                 itemBuilder: (_) => const [
-                                  PopupMenuItem(value: 'edit', child: Text('Sửa')),
-                                  PopupMenuItem(value: 'delete', child: Text('Xóa')),
+                                  PopupMenuItem(
+                                      value: 'edit', child: Text('Sửa')),
+                                  PopupMenuItem(
+                                      value: 'delete', child: Text('Xóa')),
                                 ],
                               ),
                             ),
-                            if (i < filtered.length - 1) const Divider(height: 1),
+                            if (i < filtered.length - 1)
+                              const Divider(height: 1),
                           ],
                         ],
                       ),
@@ -131,7 +152,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  Future<void> _handleAction(String action, TransactionModel item, String userId) async {
+  Future<void> _handleAction(
+      String action, TransactionModel item, String userId) async {
     if (action == 'edit') {
       await context.push('/transaction/edit', extra: item);
       return;
@@ -155,7 +177,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 }
 
 class _TotalCard extends StatelessWidget {
-  const _TotalCard({required this.label, required this.value, required this.icon});
+  const _TotalCard(
+      {required this.label, required this.value, required this.icon});
   final String label;
   final double value;
   final IconData icon;
@@ -175,7 +198,9 @@ class _TotalCard extends StatelessWidget {
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(formatMoney(value), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+              child: Text(formatMoney(value),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w900, fontSize: 17)),
             ),
           ],
         ),

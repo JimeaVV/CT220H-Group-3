@@ -49,31 +49,40 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ButtonSegment(value: 'month', label: Text('30 ngày')),
             ],
             selected: {_period},
-            onSelectionChanged: (value) => setState(() => _period = value.first),
+            onSelectionChanged: (value) =>
+                setState(() => _period = value.first),
           ),
           const SizedBox(height: 20),
           summary.when(
             data: (data) => _SummaryCards(summary: data),
-            loading: () => const SizedBox(height: 120, child: Center(child: CircularProgressIndicator())),
-            error: (error, _) => ErrorCard(error: error, onRetry: () => ref.invalidate(summaryProvider(userId))),
+            loading: () => const SizedBox(
+                height: 120, child: Center(child: CircularProgressIndicator())),
+            error: (error, _) => ErrorCard(
+                error: error,
+                onRetry: () => ref.invalidate(summaryProvider(userId))),
           ),
           const SizedBox(height: 24),
           const SectionHeader(title: 'Cơ cấu thu chi tháng này'),
           const SizedBox(height: 12),
           summary.when(
             data: (data) => _IncomeExpensePie(summary: data),
-            loading: () => const SizedBox(height: 240, child: Center(child: CircularProgressIndicator())),
+            loading: () => const SizedBox(
+                height: 240, child: Center(child: CircularProgressIndicator())),
             error: (_, __) => const SizedBox.shrink(),
           ),
           const SizedBox(height: 26),
-          SectionHeader(title: _period == 'week' ? 'Biến động 7 ngày' : 'Biến động 30 ngày'),
+          SectionHeader(
+              title:
+                  _period == 'week' ? 'Biến động 7 ngày' : 'Biến động 30 ngày'),
           const SizedBox(height: 12),
           chart.when(
             data: (points) => _DailyBarChart(points: points),
-            loading: () => const SizedBox(height: 300, child: Center(child: CircularProgressIndicator())),
+            loading: () => const SizedBox(
+                height: 300, child: Center(child: CircularProgressIndicator())),
             error: (error, _) => ErrorCard(
               error: error,
-              onRetry: () => ref.invalidate(chartProvider(ChartRequest(userId, _period))),
+              onRetry: () =>
+                  ref.invalidate(chartProvider(ChartRequest(userId, _period))),
             ),
           ),
           const SizedBox(height: 18),
@@ -109,16 +118,25 @@ class _SummaryCards extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _MetricCard(label: 'Thu nhập', value: summary.totalIncome, icon: Icons.south_west_rounded)),
+        Expanded(
+            child: _MetricCard(
+                label: 'Thu nhập',
+                value: summary.totalIncome,
+                icon: Icons.south_west_rounded)),
         const SizedBox(width: 12),
-        Expanded(child: _MetricCard(label: 'Chi tiêu', value: summary.totalExpense, icon: Icons.north_east_rounded)),
+        Expanded(
+            child: _MetricCard(
+                label: 'Chi tiêu',
+                value: summary.totalExpense,
+                icon: Icons.north_east_rounded)),
       ],
     );
   }
 }
 
 class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.label, required this.value, required this.icon});
+  const _MetricCard(
+      {required this.label, required this.value, required this.icon});
   final String label;
   final double value;
   final IconData icon;
@@ -138,7 +156,9 @@ class _MetricCard extends StatelessWidget {
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(formatMoney(value), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+              child: Text(formatMoney(value),
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w900)),
             ),
           ],
         ),
@@ -183,8 +203,16 @@ class _IncomeExpensePie extends StatelessWidget {
                           sectionsSpace: 3,
                           startDegreeOffset: -90,
                           sections: [
-                            PieChartSectionData(value: income, color: primary, radius: 34, showTitle: false),
-                            PieChartSectionData(value: expense, color: secondary, radius: 34, showTitle: false),
+                            PieChartSectionData(
+                                value: income,
+                                color: primary,
+                                radius: 34,
+                                showTitle: false),
+                            PieChartSectionData(
+                                value: expense,
+                                color: secondary,
+                                radius: 34,
+                                showTitle: false),
                           ],
                         ),
                       ),
@@ -197,7 +225,8 @@ class _IncomeExpensePie extends StatelessWidget {
                         children: [
                           _Legend(color: primary, label: 'Thu', value: income),
                           const SizedBox(height: 20),
-                          _Legend(color: secondary, label: 'Chi', value: expense),
+                          _Legend(
+                              color: secondary, label: 'Chi', value: expense),
                           const SizedBox(height: 20),
                           Text(
                             'Chênh lệch',
@@ -207,7 +236,8 @@ class _IncomeExpensePie extends StatelessWidget {
                           FittedBox(
                             child: Text(
                               formatMoney(income - expense),
-                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900, fontSize: 18),
                             ),
                           ),
                         ],
@@ -222,7 +252,8 @@ class _IncomeExpensePie extends StatelessWidget {
 }
 
 class _Legend extends StatelessWidget {
-  const _Legend({required this.color, required this.label, required this.value});
+  const _Legend(
+      {required this.color, required this.label, required this.value});
   final Color color;
   final String label;
   final double value;
@@ -231,14 +262,20 @@ class _Legend extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(width: 11, height: 11, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+        Container(
+            width: 11,
+            height: 11,
+            decoration: BoxDecoration(
+                color: color, borderRadius: BorderRadius.circular(3))),
         const SizedBox(width: 9),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: Theme.of(context).textTheme.bodySmall),
-              FittedBox(child: Text(formatMoney(value), style: const TextStyle(fontWeight: FontWeight.w800))),
+              FittedBox(
+                  child: Text(formatMoney(value),
+                      style: const TextStyle(fontWeight: FontWeight.w800))),
             ],
           ),
         ),
@@ -269,7 +306,10 @@ class _DailyBarChart extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final incomeColor = isDark ? Colors.white : Colors.black;
     final expenseColor = isDark ? Colors.white38 : Colors.black38;
-    final maxAmount = points.fold<double>(0, (maxValue, item) => math.max(maxValue, math.max(item.income, item.expense)));
+    final maxAmount = points.fold<double>(
+        0,
+        (maxValue, item) =>
+            math.max(maxValue, math.max(item.income, item.expense)));
     final maxY = maxAmount <= 0 ? 1.0 : maxAmount * 1.25;
 
     return Card(
@@ -285,30 +325,43 @@ class _DailyBarChart extends StatelessWidget {
                 show: true,
                 drawVerticalLine: false,
                 horizontalInterval: maxY / 4,
-                getDrawingHorizontalLine: (_) => FlLine(color: Theme.of(context).dividerColor, strokeWidth: 1),
+                getDrawingHorizontalLine: (_) => FlLine(
+                    color: Theme.of(context).dividerColor, strokeWidth: 1),
               ),
               borderData: FlBorderData(show: false),
               barTouchData: BarTouchData(
                 touchTooltipData: BarTouchTooltipData(
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                      BarTooltipItem(
                     '${rodIndex == 0 ? 'Thu' : 'Chi'}\n${formatMoney(rod.toY)}',
-                    TextStyle(color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.w700),
+                    TextStyle(
+                        color: isDark ? Colors.black : Colors.white,
+                        fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
               titlesData: FlTitlesData(
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 32,
                     getTitlesWidget: (value, meta) {
                       final index = value.toInt();
-                      if (index < 0 || index >= points.length) return const SizedBox.shrink();
-                      final step = points.length > 12 ? 3 : points.length > 7 ? 2 : 1;
-                      if (index % step != 0 && index != points.length - 1) return const SizedBox.shrink();
+                      if (index < 0 || index >= points.length)
+                        return const SizedBox.shrink();
+                      final step = points.length > 12
+                          ? 3
+                          : points.length > 7
+                              ? 2
+                              : 1;
+                      if (index % step != 0 && index != points.length - 1)
+                        return const SizedBox.shrink();
                       return SideTitleWidget(
                         meta: meta,
                         child: Text(
@@ -326,8 +379,16 @@ class _DailyBarChart extends StatelessWidget {
                     x: i,
                     barsSpace: 3,
                     barRods: [
-                      BarChartRodData(toY: points[i].income, width: points.length > 14 ? 5 : 8, color: incomeColor, borderRadius: BorderRadius.circular(4)),
-                      BarChartRodData(toY: points[i].expense, width: points.length > 14 ? 5 : 8, color: expenseColor, borderRadius: BorderRadius.circular(4)),
+                      BarChartRodData(
+                          toY: points[i].income,
+                          width: points.length > 14 ? 5 : 8,
+                          color: incomeColor,
+                          borderRadius: BorderRadius.circular(4)),
+                      BarChartRodData(
+                          toY: points[i].expense,
+                          width: points.length > 14 ? 5 : 8,
+                          color: expenseColor,
+                          borderRadius: BorderRadius.circular(4)),
                     ],
                   ),
               ],

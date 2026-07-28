@@ -29,7 +29,8 @@ class RecurringTransactionModel {
   final DateTime nextTriggerDate;
   final bool isActive;
 
-  factory RecurringTransactionModel.fromJson(Map<String, dynamic> json) => RecurringTransactionModel(
+  factory RecurringTransactionModel.fromJson(Map<String, dynamic> json) =>
+      RecurringTransactionModel(
         id: json['id']?.toString() ?? '',
         userId: json['userId']?.toString() ?? '',
         walletId: json['walletId']?.toString() ?? '',

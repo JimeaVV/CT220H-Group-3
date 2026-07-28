@@ -14,7 +14,8 @@ class AuthRepository {
   Stream<User?> authStateChanges() => _auth.userChanges();
   User? get currentUser => _auth.currentUser;
 
-  Future<UserCredential> signInWithEmail({required String email, required String password}) async {
+  Future<UserCredential> signInWithEmail(
+      {required String email, required String password}) async {
     final credential = await _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -100,7 +101,8 @@ class AuthRepository {
     String resolvedName = '';
     if (customDisplayName != null && customDisplayName.trim().isNotEmpty) {
       resolvedName = customDisplayName.trim();
-    } else if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
+    } else if (user.displayName != null &&
+        user.displayName!.trim().isNotEmpty) {
       resolvedName = user.displayName!.trim();
     }
 

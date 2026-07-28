@@ -23,7 +23,8 @@ ApiException mapApiException(Object error) {
       if (rawDetail is String) detail = rawDetail;
       if (rawDetail is List) {
         detail = rawDetail
-            .map((item) => item is Map ? item['msg']?.toString() : item.toString())
+            .map((item) =>
+                item is Map ? item['msg']?.toString() : item.toString())
             .whereType<String>()
             .join('\n');
       }

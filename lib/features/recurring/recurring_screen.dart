@@ -53,7 +53,8 @@ class RecurringScreen extends ConsumerWidget {
                     child: EmptyState(
                       icon: Icons.event_repeat_rounded,
                       title: 'Chưa có giao dịch lặp',
-                      message: 'Tạo lịch cho tiền nhà, tiền mạng, lương hoặc các khoản cố định.',
+                      message:
+                          'Tạo lịch cho tiền nhà, tiền mạng, lương hoặc các khoản cố định.',
                       actionLabel: 'Tạo lịch đầu tiên',
                       onAction: () => _showRecurringForm(context, ref, userId),
                     ),
@@ -87,8 +88,10 @@ class RecurringScreen extends ConsumerWidget {
                 for (final item in items) ...[
                   _RecurringCard(
                     item: item,
-                    onToggle: (active) => _toggleActive(context, ref, userId, item, active),
-                    onEdit: () => _showRecurringForm(context, ref, userId, existing: item),
+                    onToggle: (active) =>
+                        _toggleActive(context, ref, userId, item, active),
+                    onEdit: () => _showRecurringForm(context, ref, userId,
+                        existing: item),
                     onDelete: () => _delete(context, ref, userId, item),
                   ),
                   const SizedBox(height: 12),
@@ -106,9 +109,11 @@ class RecurringScreen extends ConsumerWidget {
     );
   }
 
-  static Future<void> _runNow(BuildContext context, WidgetRef ref, String userId) async {
+  static Future<void> _runNow(
+      BuildContext context, WidgetRef ref, String userId) async {
     try {
-      final processed = await ref.read(financeRepositoryProvider).runRecurringNow();
+      final processed =
+          await ref.read(financeRepositoryProvider).runRecurringNow();
       ref.invalidate(recurringProvider(userId));
       invalidateFinanceData(ref, userId);
       if (context.mounted) {
@@ -120,7 +125,8 @@ class RecurringScreen extends ConsumerWidget {
         );
       }
     } catch (error) {
-      if (context.mounted) showAppSnackBar(context, error.toString(), isError: true);
+      if (context.mounted)
+        showAppSnackBar(context, error.toString(), isError: true);
     }
   }
 
@@ -138,10 +144,12 @@ class RecurringScreen extends ConsumerWidget {
       );
       ref.invalidate(recurringProvider(userId));
       if (context.mounted) {
-        showAppSnackBar(context, active ? 'Đã bật lịch lặp.' : 'Đã tạm dừng lịch lặp.');
+        showAppSnackBar(
+            context, active ? 'Đã bật lịch lặp.' : 'Đã tạm dừng lịch lặp.');
       }
     } catch (error) {
-      if (context.mounted) showAppSnackBar(context, error.toString(), isError: true);
+      if (context.mounted)
+        showAppSnackBar(context, error.toString(), isError: true);
     }
   }
 
@@ -154,7 +162,8 @@ class RecurringScreen extends ConsumerWidget {
     final confirmed = await showDeleteConfirmation(
       context,
       title: 'Xóa lịch giao dịch?',
-      message: 'Lịch “${item.note.isEmpty ? item.categoryName : item.note}” sẽ bị xóa vĩnh viễn.',
+      message:
+          'Lịch “${item.note.isEmpty ? item.categoryName : item.note}” sẽ bị xóa vĩnh viễn.',
     );
     if (!confirmed) return;
 
@@ -163,7 +172,8 @@ class RecurringScreen extends ConsumerWidget {
       ref.invalidate(recurringProvider(userId));
       if (context.mounted) showAppSnackBar(context, 'Đã xóa lịch giao dịch.');
     } catch (error) {
-      if (context.mounted) showAppSnackBar(context, error.toString(), isError: true);
+      if (context.mounted)
+        showAppSnackBar(context, error.toString(), isError: true);
     }
   }
 
@@ -183,16 +193,20 @@ class RecurringScreen extends ConsumerWidget {
       wallets = result[0] as List<WalletModel>;
       categories = result[1] as List<CategoryModel>;
     } catch (error) {
-      if (context.mounted) showAppSnackBar(context, error.toString(), isError: true);
+      if (context.mounted)
+        showAppSnackBar(context, error.toString(), isError: true);
       return;
     }
 
     if (wallets.isEmpty) {
-      if (context.mounted) showAppSnackBar(context, 'Hãy tạo ít nhất một ví trước.', isError: true);
+      if (context.mounted)
+        showAppSnackBar(context, 'Hãy tạo ít nhất một ví trước.',
+            isError: true);
       return;
     }
     if (categories.isEmpty) {
-      if (context.mounted) showAppSnackBar(context, 'Hãy tạo danh mục trước.', isError: true);
+      if (context.mounted)
+        showAppSnackBar(context, 'Hãy tạo danh mục trước.', isError: true);
       return;
     }
 
@@ -205,13 +219,17 @@ class RecurringScreen extends ConsumerWidget {
     var walletId = existing?.walletId;
     var categoryId = existing?.categoryId;
     var cycle = existing?.cycle ?? 'monthly';
-    var nextDate = existing?.nextTriggerDate.toLocal() ?? DateTime.now().add(const Duration(days: 1));
+    var nextDate = existing?.nextTriggerDate.toLocal() ??
+        DateTime.now().add(const Duration(days: 1));
     var isActive = existing?.isActive ?? true;
 
-    if (!wallets.any((item) => item.id == walletId)) walletId = wallets.first.id;
-    var filteredCategories = categories.where((item) => item.type == type).toList();
+    if (!wallets.any((item) => item.id == walletId))
+      walletId = wallets.first.id;
+    var filteredCategories =
+        categories.where((item) => item.type == type).toList();
     if (!filteredCategories.any((item) => item.id == categoryId)) {
-      categoryId = filteredCategories.isEmpty ? null : filteredCategories.first.id;
+      categoryId =
+          filteredCategories.isEmpty ? null : filteredCategories.first.id;
     }
 
     final submitted = await showModalBottomSheet<bool>(
@@ -220,9 +238,11 @@ class RecurringScreen extends ConsumerWidget {
       useSafeArea: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          filteredCategories = categories.where((item) => item.type == type).toList();
+          filteredCategories =
+              categories.where((item) => item.type == type).toList();
           if (!filteredCategories.any((item) => item.id == categoryId)) {
-            categoryId = filteredCategories.isEmpty ? null : filteredCategories.first.id;
+            categoryId =
+                filteredCategories.isEmpty ? null : filteredCategories.first.id;
           }
 
           Future<void> pickDate() async {
@@ -266,10 +286,13 @@ class RecurringScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          existing == null ? 'Tạo giao dịch định kỳ' : 'Sửa giao dịch định kỳ',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
+                          existing == null
+                              ? 'Tạo giao dịch định kỳ'
+                              : 'Sửa giao dịch định kỳ',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                  ),
                         ),
                       ),
                       IconButton(
@@ -296,15 +319,19 @@ class RecurringScreen extends ConsumerWidget {
                   TextFormField(
                     controller: amountController,
                     autofocus: existing == null,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))
+                    ],
                     decoration: const InputDecoration(
                       labelText: 'Số tiền',
                       prefixText: '₫  ',
                     ),
                     validator: (value) {
                       final amount = parseMoneyInput(value ?? '');
-                      if (amount == null || amount <= 0) return 'Số tiền phải lớn hơn 0';
+                      if (amount == null || amount <= 0)
+                        return 'Số tiền phải lớn hơn 0';
                       return null;
                     },
                   ),
@@ -316,7 +343,8 @@ class RecurringScreen extends ConsumerWidget {
                       prefixIcon: Icon(Icons.account_balance_wallet_outlined),
                     ),
                     items: wallets
-                        .map((item) => DropdownMenuItem(value: item.id, child: Text(item.name)))
+                        .map((item) => DropdownMenuItem(
+                            value: item.id, child: Text(item.name)))
                         .toList(),
                     onChanged: (value) => setModalState(() => walletId = value),
                     validator: (value) => value == null ? 'Hãy chọn ví' : null,
@@ -336,8 +364,10 @@ class RecurringScreen extends ConsumerWidget {
                           ),
                         )
                         .toList(),
-                    onChanged: (value) => setModalState(() => categoryId = value),
-                    validator: (value) => value == null ? 'Hãy chọn danh mục phù hợp' : null,
+                    onChanged: (value) =>
+                        setModalState(() => categoryId = value),
+                    validator: (value) =>
+                        value == null ? 'Hãy chọn danh mục phù hợp' : null,
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
@@ -347,12 +377,17 @@ class RecurringScreen extends ConsumerWidget {
                       prefixIcon: Icon(Icons.loop_rounded),
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'daily', child: Text('Hằng ngày')),
-                      DropdownMenuItem(value: 'weekly', child: Text('Hằng tuần')),
-                      DropdownMenuItem(value: 'monthly', child: Text('Hằng tháng')),
-                      DropdownMenuItem(value: 'yearly', child: Text('Hằng năm')),
+                      DropdownMenuItem(
+                          value: 'daily', child: Text('Hằng ngày')),
+                      DropdownMenuItem(
+                          value: 'weekly', child: Text('Hằng tuần')),
+                      DropdownMenuItem(
+                          value: 'monthly', child: Text('Hằng tháng')),
+                      DropdownMenuItem(
+                          value: 'yearly', child: Text('Hằng năm')),
                     ],
-                    onChanged: (value) => setModalState(() => cycle = value ?? cycle),
+                    onChanged: (value) =>
+                        setModalState(() => cycle = value ?? cycle),
                   ),
                   const SizedBox(height: 14),
                   InkWell(
@@ -387,7 +422,8 @@ class RecurringScreen extends ConsumerWidget {
                   const SizedBox(height: 14),
                   FilledButton.icon(
                     onPressed: () {
-                      if (formKey.currentState!.validate()) Navigator.pop(context, true);
+                      if (formKey.currentState!.validate())
+                        Navigator.pop(context, true);
                     },
                     icon: const Icon(Icons.check_rounded),
                     label: Text(existing == null ? 'Tạo lịch' : 'Lưu thay đổi'),
@@ -431,13 +467,15 @@ class RecurringScreen extends ConsumerWidget {
       if (context.mounted) {
         showAppSnackBar(
           context,
-          existing == null ? 'Đã tạo giao dịch định kỳ.' : 'Đã cập nhật giao dịch định kỳ.',
+          existing == null
+              ? 'Đã tạo giao dịch định kỳ.'
+              : 'Đã cập nhật giao dịch định kỳ.',
         );
       }
     } catch (error) {
-      if (context.mounted) showAppSnackBar(context, error.toString(), isError: true);
-    } finally {
-    }
+      if (context.mounted)
+        showAppSnackBar(context, error.toString(), isError: true);
+    } finally {}
   }
 }
 
@@ -471,11 +509,16 @@ class _RecurringCard extends StatelessWidget {
                     height: 46,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.06),
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: Text(
-                      item.categoryIcon.isEmpty ? (income ? '↙' : '↗') : item.categoryIcon,
+                      item.categoryIcon.isEmpty
+                          ? (income ? '↙' : '↗')
+                          : item.categoryIcon,
                       style: const TextStyle(fontSize: 21),
                     ),
                   ),
@@ -488,7 +531,8 @@ class _RecurringCard extends StatelessWidget {
                           item.note.isEmpty ? item.categoryName : item.note,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 3),
                         Text(
@@ -501,7 +545,8 @@ class _RecurringCard extends StatelessWidget {
                     ),
                   ),
                   PopupMenuButton<String>(
-                    onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
+                    onSelected: (value) =>
+                        value == 'edit' ? onEdit() : onDelete(),
                     itemBuilder: (_) => const [
                       PopupMenuItem(value: 'edit', child: Text('Chỉnh sửa')),
                       PopupMenuItem(value: 'delete', child: Text('Xóa')),
@@ -518,7 +563,8 @@ class _RecurringCard extends StatelessWidget {
                       children: [
                         Text(
                           '${income ? '+' : '-'}${formatMoney(item.amount)}',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 3),
                         Text(

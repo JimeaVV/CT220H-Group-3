@@ -40,7 +40,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } on FirebaseAuthException catch (error) {
       if (mounted) showAppSnackBar(context, _authMessage(error), isError: true);
     } catch (error) {
-      if (mounted) showAppSnackBar(context, mapApiException(error).message, isError: true);
+      if (mounted)
+        showAppSnackBar(context, mapApiException(error).message, isError: true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -60,7 +61,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _resetPassword() async {
-    final controller = TextEditingController(text: _emailController.text.trim());
+    final controller =
+        TextEditingController(text: _emailController.text.trim());
     final email = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -71,7 +73,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           decoration: const InputDecoration(labelText: 'Email'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Hủy')),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: const Text('Gửi email'),
@@ -84,7 +88,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       await ref.read(authRepositoryProvider).sendPasswordReset(email);
-      if (mounted) showAppSnackBar(context, 'Đã gửi liên kết đặt lại mật khẩu.');
+      if (mounted)
+        showAppSnackBar(context, 'Đã gửi liên kết đặt lại mật khẩu.');
     } on FirebaseAuthException catch (error) {
       if (mounted) showAppSnackBar(context, _authMessage(error), isError: true);
     }
@@ -104,14 +109,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Align(alignment: Alignment.centerLeft, child: FinTrackLogo(size: 60, showName: true)),
+                    const Align(
+                        alignment: Alignment.centerLeft,
+                        child: FinTrackLogo(size: 60, showName: true)),
                     const SizedBox(height: 46),
                     Text(
                       'Chào mừng trở lại.',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1.1,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1.1,
+                              ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -141,19 +149,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                          icon: Icon(_obscure
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined),
                         ),
                       ),
                     ),
                     Align(
                       alignment: Alignment.centerRight,
-                      child: TextButton(onPressed: _loading ? null : _resetPassword, child: const Text('Quên mật khẩu?')),
+                      child: TextButton(
+                          onPressed: _loading ? null : _resetPassword,
+                          child: const Text('Quên mật khẩu?')),
                     ),
                     const SizedBox(height: 8),
                     FilledButton(
                       onPressed: _loading ? null : _signIn,
                       child: _loading
-                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2))
                           : const Text('Đăng nhập'),
                     ),
                     const SizedBox(height: 16),
@@ -162,7 +177,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const Expanded(child: Divider()),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('hoặc', style: Theme.of(context).textTheme.bodySmall),
+                          child: Text('hoặc',
+                              style: Theme.of(context).textTheme.bodySmall),
                         ),
                         const Expanded(child: Divider()),
                       ],
@@ -170,7 +186,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 16),
                     OutlinedButton.icon(
                       onPressed: _loading ? null : _googleSignIn,
-                      icon: const Text('G', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                      icon: const Text('G',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w900, fontSize: 18)),
                       label: const Text('Tiếp tục bằng Google'),
                     ),
                     const SizedBox(height: 24),
@@ -178,7 +196,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text('Chưa có tài khoản?'),
-                        TextButton(onPressed: () => context.push('/register'), child: const Text('Đăng ký')),
+                        TextButton(
+                            onPressed: () => context.push('/register'),
+                            child: const Text('Đăng ký')),
                       ],
                     ),
                   ],
@@ -194,7 +214,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
 String _authMessage(FirebaseAuthException error) {
   return switch (error.code) {
-    'invalid-credential' || 'wrong-password' || 'user-not-found' => 'Email hoặc mật khẩu không đúng.',
+    'invalid-credential' ||
+    'wrong-password' ||
+    'user-not-found' =>
+      'Email hoặc mật khẩu không đúng.',
     'invalid-email' => 'Email không hợp lệ.',
     'user-disabled' => 'Tài khoản này đã bị vô hiệu hóa.',
     'too-many-requests' => 'Thao tác quá nhiều lần. Hãy thử lại sau.',

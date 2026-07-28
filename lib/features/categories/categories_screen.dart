@@ -47,7 +47,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 ButtonSegment(value: 'Thu', label: Text('Khoản thu')),
               ],
               selected: {_type},
-              onSelectionChanged: (value) => setState(() => _type = value.first),
+              onSelectionChanged: (value) =>
+                  setState(() => _type = value.first),
             ),
           ),
           Expanded(
@@ -55,15 +56,19 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Padding(
                 padding: const EdgeInsets.all(18),
-                child: ErrorCard(error: error, onRetry: () => ref.invalidate(categoriesProvider(userId))),
+                child: ErrorCard(
+                    error: error,
+                    onRetry: () => ref.invalidate(categoriesProvider(userId))),
               ),
               data: (items) {
-                final filtered = items.where((item) => item.type == _type).toList();
+                final filtered =
+                    items.where((item) => item.type == _type).toList();
                 if (filtered.isEmpty) {
                   return EmptyState(
                     icon: Icons.category_outlined,
                     title: 'Chưa có danh mục $_type',
-                    message: 'Khởi tạo danh mục mặc định hoặc tạo danh mục riêng.',
+                    message:
+                        'Khởi tạo danh mục mặc định hoặc tạo danh mục riêng.',
                     actionLabel: 'Tạo danh mục',
                     onAction: () => _showCategoryDialog(userId),
                   );
@@ -81,16 +86,28 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           height: 46,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.06),
                             borderRadius: BorderRadius.circular(15),
                           ),
-                          child: Text(category.icon.trim().isEmpty ? (_type == 'Chi' ? '↘' : '↗') : category.icon, style: const TextStyle(fontSize: 21)),
+                          child: Text(
+                              category.icon.trim().isEmpty
+                                  ? (_type == 'Chi' ? '↘' : '↗')
+                                  : category.icon,
+                              style: const TextStyle(fontSize: 21)),
                         ),
-                        title: Text(category.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                        subtitle: Text(category.isDefault ? 'Danh mục mặc định' : 'Danh mục của bạn'),
+                        title: Text(category.name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w800)),
+                        subtitle: Text(category.isDefault
+                            ? 'Danh mục mặc định'
+                            : 'Danh mục của bạn'),
                         trailing: category.isDefault
                             ? const Icon(Icons.lock_outline_rounded, size: 19)
-                            : const Icon(Icons.person_outline_rounded, size: 19),
+                            : const Icon(Icons.person_outline_rounded,
+                                size: 19),
                       ),
                     );
                   },
@@ -113,7 +130,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     try {
       await ref.read(financeRepositoryProvider).initializeDefaultCategories();
       ref.invalidate(categoriesProvider(userId));
-      if (mounted) showAppSnackBar(context, 'Đã kiểm tra và khởi tạo danh mục mặc định.');
+      if (mounted)
+        showAppSnackBar(context, 'Đã kiểm tra và khởi tạo danh mục mặc định.');
     } catch (error) {
       if (mounted) showAppSnackBar(context, error.toString(), isError: true);
     } finally {
@@ -123,7 +141,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
 
   Future<void> _showCategoryDialog(String userId) async {
     final nameController = TextEditingController();
-    final iconController = TextEditingController(text: _type == 'Chi' ? '🧾' : '💰');
+    final iconController =
+        TextEditingController(text: _type == 'Chi' ? '🧾' : '💰');
     final formKey = GlobalKey<FormState>();
 
     final submitted = await showDialog<bool>(
@@ -139,21 +158,27 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 controller: nameController,
                 autofocus: true,
                 decoration: const InputDecoration(labelText: 'Tên danh mục'),
-                validator: (value) => value == null || value.trim().isEmpty ? 'Hãy nhập tên danh mục' : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Hãy nhập tên danh mục'
+                    : null,
               ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: iconController,
-                decoration: const InputDecoration(labelText: 'Biểu tượng emoji', hintText: '🍜'),
+                decoration: const InputDecoration(
+                    labelText: 'Biểu tượng emoji', hintText: '🍜'),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy')),
           FilledButton(
             onPressed: () {
-              if (formKey.currentState!.validate()) Navigator.pop(context, true);
+              if (formKey.currentState!.validate())
+                Navigator.pop(context, true);
             },
             child: const Text('Tạo'),
           ),
@@ -176,7 +201,6 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       if (mounted) showAppSnackBar(context, 'Đã tạo danh mục.');
     } catch (error) {
       if (mounted) showAppSnackBar(context, error.toString(), isError: true);
-    } finally {
-    }
+    } finally {}
   }
 }
